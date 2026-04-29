@@ -75,7 +75,11 @@ BEGIN
                 MR_Items.Godown_Id,
                 M_Godown.Godown_Name,
                 MR_Items.Godown_Rack_Id,
-                M_Item.Item_Rate AS UnitCost,
+                CASE 
+                    WHEN ISNULL(M_Item.Avg_Cost, 0) = 0 
+                        THEN ISNULL(M_Item.Item_Rate, 0)
+                    ELSE M_Item.Avg_Cost
+                END AS UnitCost,
                 M_Godown_Rack.Rack_Name,
                 Coating_RequestDtl.Is_Requested,
                  (SELECT top 1 SV.Id FROM StockView as SV WHERE 

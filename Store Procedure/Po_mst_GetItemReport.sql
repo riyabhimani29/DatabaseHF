@@ -96,7 +96,8 @@ AS
   PO_DTL.Width,
   PO_DTL.Charg_Height,
   PO_DTL.Charg_Weight,
-  PO_DTL.TotalWeight AS Total_Weight
+  PO_DTL.TotalWeight AS Total_Weight,
+  PO_DTL.Discount_Percentage
  FROM   PO_DTL WITH (nolock)           
   left join M_SupplierDtl  with(nolock)  ON PO_DTL.SupDetail_Id = M_SupplierDtl.SupDetail_Id   
    left join PO_MST  with(nolock)  ON PO_DTL.PO_Id = PO_MST.PO_Id      

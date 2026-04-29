@@ -24,7 +24,11 @@ AS
     StockView.Width,
     StockView.Tbl_Name,
     StockView.Total_Qty,
-    StockView.Pending_Qty,
+    CASE 
+            WHEN (ISNULL(StockView.Pending_Qty, 0) - ISNULL(StockView.Freeze_Qty, 0)) < 0 
+                THEN 0
+            ELSE (ISNULL(StockView.Pending_Qty, 0) - ISNULL(StockView.Freeze_Qty, 0))
+        END AS Pending_Qty,
     StockView.Sales_Qty,
     StockView.LastUpdate,
     StockView.Rack_Id,
@@ -100,8 +104,6 @@ WHERE
     StockView.Godown_Id,
     M_Godown.Godown_Name,
     StockView.LastUpdate,
-    GRN_Dtl.Stock_Id
+    GRN_Dtl.Stock_Id,
+    StockView.Freeze_Qty
         ORDER BY StockView.LastUpdate;
-GO
-
-

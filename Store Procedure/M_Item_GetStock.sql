@@ -1001,7 +1001,11 @@ END AS Rate,
      m_item.hsn_code,  
      StockView.total_qty,  
      StockView.sales_qty,  
-     StockView.pending_qty,  
+     CASE 
+            WHEN (ISNULL(StockView.Pending_Qty, 0) - ISNULL(StockView.Freeze_Qty, 0)) < 0 
+                THEN 0
+            ELSE (ISNULL(StockView.Pending_Qty, 0) - ISNULL(StockView.Freeze_Qty, 0))
+        END AS pending_qty,  
      StockView.[length],  
      Tbl_Unit.master_vals                AS UnitName,  
      m_item.unit_id,  
@@ -1107,7 +1111,11 @@ END AS Rate,
         m_item.hsn_code,  
         stockview.total_qty,  
         stockview.sales_qty,  
-        stockview.pending_qty,  
+        CASE 
+            WHEN (ISNULL(StockView.Pending_Qty, 0) - ISNULL(StockView.Freeze_Qty, 0)) < 0 
+                THEN 0
+            ELSE (ISNULL(StockView.Pending_Qty, 0) - ISNULL(StockView.Freeze_Qty, 0))
+        END AS pending_qty,  
         stockview.[length],  
         tbl_unit.master_vals                AS unitname,  
         m_item.unit_id,  
@@ -1230,7 +1238,11 @@ END AS Rate,
         m_item.hsn_code,  
         StockView.total_qty,  
         StockView.sales_qty,  
-        StockView.pending_qty,  
+        CASE 
+            WHEN (ISNULL(StockView.Pending_Qty, 0) - ISNULL(StockView.Freeze_Qty, 0)) < 0 
+                THEN 0
+            ELSE (ISNULL(StockView.Pending_Qty, 0) - ISNULL(StockView.Freeze_Qty, 0))
+        END AS pending_qty,  
         StockView.[length],  
         Tbl_Unit.master_vals                AS UnitName,  
         m_item.unit_id,  
@@ -1333,6 +1345,3 @@ END AS Rate,
             end  
       -- ORDER  BY LastUpdate DESC--m_item.item_code           
       end
-GO
-
-

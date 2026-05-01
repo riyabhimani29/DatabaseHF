@@ -10,6 +10,7 @@ GO
 
 
 
+
 ALTER PROCEDURE [dbo].[MaterialRequirement_StatusUpdate]
     @MR_Id INT,   
     @MR_Type NVARCHAR(2) = '',
@@ -310,25 +311,83 @@ AND T.Rack_Id   = S.Godown_Rack_Id
 AND T.ID = S.Stock_Id
 
 WHEN MATCHED THEN
-    UPDATE SET
-        T.Pending_Qty = ISNULL(T.Pending_Qty,0) + S.Qty,
-        T.Total_Qty   = T.Total_Qty + S.Qty,
-        T.LastUpdate  = dbo.Get_sysdate()
+UPDATE SET
+    T.Pending_Qty =
+        CASE
+            WHEN S.Length > 900
+                THEN ISNULL(T.Pending_Qty,0) + S.Qty
+            ELSE
+                ISNULL(T.Pending_Qty,0)
+        END,
+    T.Total_Qty =
+        CASE
+            WHEN S.Length > 900
+                THEN ISNULL(T.Total_Qty,0) + S.Qty
+            ELSE
+                ISNULL(T.Total_Qty,0)
+        END,
+    T.Scrap_Qty =
+        CASE
+            WHEN S.Length <= 900
+                THEN ISNULL(T.Scrap_Qty,0) + S.Qty
+            ELSE
+                ISNULL(T.Scrap_Qty,0)
+        END,
+    T.Scrap_Settle =
+        CASE
+            WHEN S.Length <= 900
+                THEN ISNULL(T.Scrap_Settle,0) + S.Qty
+            ELSE
+                ISNULL(T.Scrap_Settle,0)
+        END,
+
+    T.LastUpdate = dbo.Get_sysdate()
 
 WHEN NOT MATCHED THEN
     INSERT
     (
-        Godown_Id, Item_Id, Stype,
-        Total_Qty, Sales_Qty, Pending_Qty,
-        Length, Width, Rack_Id, LastUpdate
+        Godown_Id, 
+        Item_Id, 
+        Stype,
+        Sales_Qty,
+        Total_Qty,
+        Pending_Qty,
+        Scrap_Qty,
+        Scrap_Settle,
+        Length, 
+        Width, 
+        Rack_Id,
+        LastUpdate
     )
     VALUES
     (
-        S.Godown_Id, S.Item_Id, S.Stype,
-        S.Qty, 0, S.Qty,
-        S.Length, S.Width, S.Godown_Rack_Id,
+        S.Godown_Id, 
+        S.Item_Id, 
+        S.Stype,
+        0,
+        CASE 
+            WHEN S.Length > 900 THEN S.Qty
+            ELSE 0
+        END,
+        CASE 
+            WHEN S.Length > 900 THEN S.Qty
+            ELSE 0
+        END,
+        CASE 
+            WHEN S.Length <= 900 THEN S.Qty
+            ELSE 0
+        END,
+        CASE 
+            WHEN S.Length <= 900 THEN S.Qty
+            ELSE 0
+        END,
+        S.Length, 
+        S.Width, 
+        S.Godown_Rack_Id,
         dbo.Get_sysdate()
     )
+
+
 
 OUTPUT
     S.MR_Items_Id,
@@ -690,6 +749,3 @@ END
         SET @RetMsg = 'Error Occurred - ' + ERROR_MESSAGE();
     END CATCH;      
 END;
-GO
-
-

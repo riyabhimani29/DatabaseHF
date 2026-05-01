@@ -12,6 +12,10 @@ GO
 
 
                                        
+
+
+
+                                       
 ALTER PROCEDURE [dbo].[GRN_Mst_DCGRN_Ins] @PO_Type        VARCHAR(500),          
                                            @GRN_Id         INT,          
                                            @DC_Id          INT,          
@@ -565,12 +569,9 @@ END
                      -- Update MR_Items
                     UPDATE MRI
                     SET 
-                        Issue_Qty = ISNULL(Issue_Qty, 0) + @_ReceiveQty,
-                        MRI.IsFreeze = 0,
-                        MRI.Freeze_Qty = MRI.Freeze_Qty - @_ReceiveQty,
-                        MRI.Release_Qty = MRI.Release_Qty - @_ReceiveQty
+                        Issue_Qty = ISNULL(Issue_Qty, 0) + @_ReceiveQty
                     FROM MR_Items MRI
-                    WHERE MRI.IsFreeze = 1 AND  MRI.MR_Items_Id = @_MR_Item_Id;
+                    WHERE MRI.MR_Items_Id = @_MR_Item_Id;
 
 
                     SELECT @Item_Name = ISNULL(Item_Name, 'Item ID: ' + CAST(@Item_Id AS VARCHAR(10)))
@@ -653,9 +654,10 @@ END
           
       /************************************* ROLLBACK *************************************/          
       SET @RetVal = -405          
-      -- 0 IS FOR ERROR                                                            
+      -- 0 IS FOR ERROR                                                           
+      
       SET @RetMsg ='Error Occurred - ' + Error_message() + '.'          
   END catch
-GO
+  GO
 
 

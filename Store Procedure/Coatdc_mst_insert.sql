@@ -10,6 +10,8 @@ GO
 
 
 
+
+
 ALTER PROCEDURE [dbo].[Coatdc_mst_insert] 
     @Dept_ID           INT,
     @DC_Type           VARCHAR(500),                                
@@ -228,9 +230,17 @@ BEGIN
 
                     SET @_DID = SCOPE_IDENTITY()              
 					
-					IF ( @_MR_Item_Id > 0 )
+					IF ( @_MR_Item_Id > 0 AND @CODC_Type = 'F')
 					BEGIN 
-						UPDATE MR_Items SET MR_Items.Coating_Value = @_Material_Value WHERE MR_Items.MR_Items_Id = @_MR_Item_Id;
+						UPDATE MR_Items SET MR_Items.Coating_Value = @_Material_Value, MR_Items.Freeze_Qty = (MR_Items.Freeze_Qty - @_DC_Qty),
+                        MR_Items.IsFreeze = 0, MR_Items.Release_Qty = (MR_Items.Release_Qty - @_DC_Qty)
+                        WHERE MR_Items.MR_Items_Id = @_MR_Item_Id;
+
+                        UPDATE SV SET SV.Freeze_Qty = ISNULL(SV.Freeze_Qty,0) - @_DC_Qty 
+                        FROM MR_Items MI
+                        INNER JOIN StockView SV ON MI.Stock_Id = SV.Id
+                        WHERE MI.MR_Items_Id = @_MR_Item_Id;
+
 						UPDATE Coating_RequestDtl SET Is_Requested = 1 WHERE Coating_RequestDtl.BOM_Dtl_Id = @_MR_Item_Id;
 					END
 					
@@ -622,7 +632,7 @@ BEGIN
                     DECLARE db_curspl CURSOR FOR              
                     SELECT srno, Id, DCDtl_Id, DC_Id, dept_id, Item_Id, calc_area, running_feet, rate_feet, 
                            coating_value, qty, dc_qty, itemlength, total_weight, material_value, remark, 
-                           Scrap_Qty, scrap_length, godown_id, [weight],Coating_Rate              
+                           Scrap_Qty, scrap_length, godown_id, [weight],MR_Item_Id,Coating_Rate              
                     FROM @DtlPara              
                     WHERE godown_id <> 0 AND Is_Delete = 0;              
 
@@ -632,7 +642,7 @@ BEGIN
                                                    @_Item_Id, @_Calc_Area, @_Running_Feet, @_Rate_Feet, 
                                                    @_Coating_Value, @_Qty, @_DC_Qty, @_ItemLength, 
                                                    @_Total_Weight, @_Material_Value, @_Remark, 
-                                                   @_Scrap_Qty, @_Scrap_Length, @_Godown_Id1, @_Weight,@_Coating_Rate              
+                                                   @_Scrap_Qty, @_Scrap_Length, @_Godown_Id1, @_Weight,@_MR_Item_Id,@_Coating_Rate              
 
                     WHILE @@FETCH_STATUS = 0              
                     BEGIN              
@@ -657,6 +667,21 @@ BEGIN
                         BEGIN              
                             SET @_DEID1 = @_DCDtl_Id              
                         END              
+
+
+                        IF ( @_MR_Item_Id > 0 AND @CODC_Type = 'F')
+					BEGIN 
+						UPDATE MR_Items SET MR_Items.Coating_Value = @_Material_Value, MR_Items.Freeze_Qty = (MR_Items.Freeze_Qty - @_DC_Qty),
+                        MR_Items.IsFreeze = 0, MR_Items.Release_Qty = (MR_Items.Release_Qty - @_DC_Qty)
+                        WHERE MR_Items.MR_Items_Id = @_MR_Item_Id;
+
+                        UPDATE SV SET SV.Freeze_Qty = ISNULL(SV.Freeze_Qty,0) - @_DC_Qty 
+                        FROM MR_Items MI
+                        INNER JOIN StockView SV ON MI.Stock_Id = SV.Id
+                        WHERE MI.MR_Items_Id = @_MR_Item_Id;
+
+						UPDATE Coating_RequestDtl SET Is_Requested = 1 WHERE Coating_RequestDtl.BOM_Dtl_Id = @_MR_Item_Id;
+					END
 
                         IF (@CODC_Type = 'F') /* Edit Time Final DC Select */              
                         BEGIN
@@ -906,7 +931,7 @@ BEGIN
                                                        @_Item_Id, @_Calc_Area, @_Running_Feet, @_Rate_Feet, 
                                                        @_Coating_Value, @_Qty, @_DC_Qty, @_ItemLength, 
                                                        @_Total_Weight, @_Material_Value, @_Remark, 
-                                                       @_Scrap_Qty, @_Scrap_Length, @_Godown_Id1, @_Weight,@_Coating_Rate              
+                                                       @_Scrap_Qty, @_Scrap_Length, @_Godown_Id1, @_Weight,@_MR_Item_Id,@_Coating_Rate              
                     END              
 
                     CLOSE db_curspl              

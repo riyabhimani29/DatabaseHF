@@ -11,6 +11,7 @@ GO
 
 
 
+
 ALTER PROCEDURE [dbo].[GetDepartmentCost]
     @Project_Id INT,
     @Dept_Id INT
@@ -46,17 +47,21 @@ BEGIN
             MR.Dept_id,
             SUM(ISNULL(MRI.Qty,0)) AS Total_Qty,
             SUM(ISNULL(MRI.Issue_Qty,0)) AS Issued_Qty,
-            SUM(ISNULL(MRI.Qty,0) * ISNULL(MRI.UnitCost,0)) AS Total_Ordered_Cost,
+            SUM(ISNULL(MRI.Qty,0) * ISNULL(MI.Item_Rate,0)) AS Total_Ordered_Cost,
 
-            SUM(ISNULL(MRI.Issue_Qty,0) * ISNULL(MRI.UnitCost,0)) AS Total_Fulfilled_Cost
+            SUM(ISNULL(MRI.Issue_Qty,0) * ISNULL(MI.Item_Rate,0)) AS Total_Fulfilled_Cost
 
             FROM MaterialRequirement MR
 
             INNER JOIN MR_Items MRI
                 ON MR.MR_Id = MRI.MR_Id
 
+             INNER JOIN M_Item MI
+                ON MRI.Item_Id = MI.Item_Id
+
             WHERE MR.Project_Id = @Project_Id
               AND MR.Dept_Id = @Dept_Id
+              AND MR_Type = 'A'
 
             GROUP BY MR.Project_Id, MR.Dept_id ;
 

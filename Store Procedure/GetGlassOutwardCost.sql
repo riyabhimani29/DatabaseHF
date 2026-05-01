@@ -10,6 +10,8 @@ GO
 
 
 
+
+
 ALTER PROCEDURE [dbo].[GetGlassOutwardCost]
     @Project_Id INT,
     @Dept_Id INT
@@ -28,6 +30,7 @@ BEGIN
             ON PD.PO_ID = PM.PO_ID
         WHERE PD.Project_Id = @Project_Id
           AND PM.Dept_Id = @Dept_Id
+         -- AND PM.Order_Type = 'GL-PO'
     ),
 
     OrderedCost AS (

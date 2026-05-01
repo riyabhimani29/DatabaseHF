@@ -88,7 +88,11 @@ AS
            Tbl_User.emp_name            AS EntryUserName,                         
            Tbl_User.personal_no         AS EntryUserNo ,                                  
      Doc_Img_Name  ,              
-     PO_MST.Revision              
+     PO_MST.Revision,
+     PO_MST.Admin_Charges,
+     PO_MST.Insurance,
+     PO_MST.Other_Charges,
+     PO_MST.Freight_Charges
  FROM   PO_MST WITH (nolock)        
      
    outer Apply (    
@@ -153,6 +157,3 @@ AS
                 )       
                                  
     ORDER  BY PO_MST.po_id DESC
-GO
-
-

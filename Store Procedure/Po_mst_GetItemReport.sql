@@ -50,7 +50,11 @@ AS
            M_Godown.godown_name,                                      
            M_Godown.godown_address      AS ShippingAddress,                                      
            CONVERT( numeric(18,0), PO_MST.grossamount) AS grossamount,                                      
-           PO_MST.advanceamount,                                      
+           PO_MST.advanceamount,  
+           PO_MST.Admin_Charges,
+           PO_MST.Insurance,
+           PO_MST.Freight_Charges,
+           PO_MST.Other_Charges,
            PO_MST.netamount,                                      
            PO_MST.paymentterms,                                      
            PO_MST.deliveryterms,                                      
@@ -221,6 +225,3 @@ AS
    --                               ELSE @PO_Type                                      
    --                             END                                      
    -- ORDER  BY PO_MST.po_id DESC 
-GO
-
-

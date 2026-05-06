@@ -342,7 +342,7 @@ END AS ReceiveQty,
                  LEFT JOIN M_Master AS Tbl_State WITH (nolock) ON M_Supplier.state_id = Tbl_State.Master_Id          
           WHERE  PO_MST.PO_Id IN (SELECT TOP 1 PO_Id          
                                   FROM   GlassQR_Dtl WITH (nolock)          
-                                  WHERE  GlassQR_Dtl.PO_Id = @Glass_QR_Id  and GlassQR_Dtl.QR_Typedtl ='OUT'        
+                                  WHERE  GlassQR_Dtl.PO_Id = @Glass_QR_Id -- and GlassQR_Dtl.QR_Typedtl ='OUT'        
                                   GROUP  BY PO_Id          
                                   HAVING Count(*) >= 1          
                                   ORDER  BY PO_Id DESC)          
@@ -413,7 +413,7 @@ END AS ReceiveQty,
            AND GlassQR_Dtl.PODtl_Id = PO_DTL.PODtl_Id          
            AND GlassQR_Dtl.Item_Id = PO_DTL.Item_Id          
            AND GlassQR_Dtl.is_out = 0       
-     and GlassQR_Dtl.QR_Typedtl ='OUT'    
+     --and GlassQR_Dtl.QR_Typedtl ='OUT'    
         GROUP  BY GlassQR_Dtl.Rack_Id) AS Tot          
      LEFT JOIN M_Project WITH (nolock)   ON PO_DTL.project_id = m_project.project_id          
      LEFT JOIN PO_MST WITH (nolock)   ON PO_DTL.po_id = PO_MST.po_id          
@@ -427,14 +427,15 @@ END AS ReceiveQty,
     PO_DTL.PO_Id IN (SELECT TOP 1 po_id          
       FROM   GlassQR_Dtl WITH (nolock)          
       WHERE  GlassQR_Dtl.po_id = @Glass_QR_Id       
-   and GlassQR_Dtl.QR_Typedtl ='OUT'    
+   --and GlassQR_Dtl.QR_Typedtl ='OUT'    
       GROUP  BY po_id          
       HAVING Count(*) >= 1          
       ORDER  BY po_id DESC)          
     AND PO_DTL.podtl_id IN (SELECT DISTINCT podtl_id          
        FROM   GlassQR_Dtl WITH (nolock)          
        WHERE  GlassQR_Dtl.po_id = @Glass_QR_Id  
-    and GlassQR_Dtl.QR_Typedtl ='OUT'  )          
+    --and GlassQR_Dtl.QR_Typedtl ='OUT'  
+    )          
     ORDER  BY PO_MST.po_id DESC           
       end
 GO

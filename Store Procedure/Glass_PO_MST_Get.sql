@@ -9,6 +9,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 
+
 ALTER PROCEDURE [dbo].[Glass_PO_MST_Get] 
     @PO_Id       INT = 0,                
     @Dept_ID     INT = 0,                  
@@ -112,7 +113,12 @@ BEGIN
            M_Item_Category.Item_Cate_Name,
            M_Item.ImageName,
            PO_DTL.OrderQty,
-           PO_DTL.PendingQty,
+            CASE 
+    WHEN (ISNULL(PO_DTL.OrderQty, 0) - ISNULL(tbl_RecQty.GrnRecQty,0)) < 0 
+        THEN 0
+    ELSE 
+        (ISNULL(PO_DTL.OrderQty, 0) - ISNULL(tbl_RecQty.GrnRecQty,0))
+    END AS PendingQty,
            PO_DTL.Charg_Weight,
            PO_DTL.Charg_Height,
            PO_DTL.UnitCost,
@@ -142,7 +148,11 @@ BEGIN
            --END AS POStatus
 
     FROM PO_DTL WITH (NOLOCK)
-
+     OUTER apply (select isnull(sum(GRN_Dtl.ReceiveQty),0) AS GrnRecQty from GRN_Dtl        
+       left join GRN_Mst on GRN_Dtl.GRN_Id = GRN_Mst.GRN_Id and  GRN_Mst.GRN_Type = 'GRN-OUT'        
+       where GRN_Mst.PO_Id = PO_DTL.PO_Id          
+       and  PO_DTL.PODtl_Id = GRN_Dtl.PODtl_Id        
+       and  GRN_Mst.GRN_Type = 'GRN-OUT') AS tbl_RecQty  
     INNER JOIN PO_MST WITH (NOLOCK)
         ON PO_DTL.PO_Id = PO_MST.PO_Id
 
@@ -168,6 +178,4 @@ BEGIN
     ORDER BY PO_DTL.PODtl_Id;
 
 END
-GO
-
 

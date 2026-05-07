@@ -9,6 +9,8 @@ SET QUOTED_IDENTIFIER ON
 GO
 
                                              
+
+                                             
 ALTER    PROCEDURE [dbo].[GRN_Mst_Insert_OUT] @PO_Type        VARCHAR(500),                          
                                        @GRN_Id         INT,                          
                                        @PO_Id          INT,                           
@@ -166,7 +168,8 @@ AS
                     @_Item_Id       AS INT= 0,                          
                     @_SupDetail_Id  AS INT= 0,                          
                     @_OrderQty      AS NUMERIC(18, 3) = 0,                          
-                    @_ReceiveQty    AS NUMERIC(18, 3) = 0,                          
+                    @_ReceiveQty    AS NUMERIC(18, 3) = 0, 
+                    @_PendingQty    AS NUMERIC(18,3) =0,
                     @_Unit_Id       AS INT= 0,                          
                     @_Length        AS NUMERIC(18, 3) = 0,                          
                     @_Weight        AS NUMERIC(18, 3) = 0,                          
@@ -185,7 +188,8 @@ AS
                      item_id,                        
                      supdetail_id,                          
                      orderqty,                          
-                     receiveqty,                          
+                     receiveqty,
+                     PendingQty,
                      unit_id,                          
                      CONVERT(NUMERIC(18, 3), length),                          
                      CONVERT(NUMERIC (18, 3), weight),                          
@@ -202,7 +206,7 @@ AS
      
             OPEN db_cursor                          
                           
-            FETCH next FROM db_cursor INTO @_PODtl_Id, @_Item_Id, @_SupDetail_Id, @_OrderQty, @_ReceiveQty, @_Unit_Id, @_Length, @_Weight, @_TotalWeight, @_UnitCost, @_ReceiveCost, @_TotalCost, @_Remark, @_IsSeletd, @_IsCoated, @_Width , @_Rack_Id       
+            FETCH next FROM db_cursor INTO @_PODtl_Id, @_Item_Id, @_SupDetail_Id, @_OrderQty, @_ReceiveQty,@_PendingQty, @_Unit_Id, @_Length, @_Weight, @_TotalWeight, @_UnitCost, @_ReceiveCost, @_TotalCost, @_Remark, @_IsSeletd, @_IsCoated, @_Width , @_Rack_Id       
   
     
        
@@ -264,6 +268,10 @@ AS
            
       if (@Glass_QR_Id > 0)                       
       begin           
+
+        IF(@_ReceiveQty = @_PendingQty)
+         BEGIN
+     
 			 UPDATE GLASSQR_DTL WITH (rowlock)      
 			 SET  Is_out = 1,      
 				 GrnDtl_Id = @_DtlIId      
@@ -277,7 +285,8 @@ AS
 						  WHERE  GLASSQR_DTL.PODtl_Id = @_PODtl_Id        
 									AND GLASSQR_DTL.QR_Typedtl = 'OUT'
 									AND GlassQR_Dtl.Is_Out  = 0 )A      
-						WHERE  A.row# <= @_ReceiveQty)        
+						WHERE  A.row# <= @_ReceiveQty)   
+           END
         
       end          
          
@@ -358,7 +367,7 @@ AS
 --                          END                          
                     END                          
                           
-                  FETCH next FROM db_cursor INTO @_PODtl_Id, @_Item_Id, @_SupDetail_Id, @_OrderQty, @_ReceiveQty, @_Unit_Id, @_Length, @_Weight,                
+                  FETCH next FROM db_cursor INTO @_PODtl_Id, @_Item_Id, @_SupDetail_Id, @_OrderQty, @_ReceiveQty,@_PendingQty, @_Unit_Id, @_Length, @_Weight,                
      @_TotalWeight, @_UnitCost, @_ReceiveCost, @_TotalCost,  @_Remark, @_IsSeletd, @_IsCoated, @_Width, @_Rack_Id                         
               END                          
                           
@@ -378,7 +387,4 @@ AS
       SET @RetVal = -405                         
       -- 0 IS FOR ERROR                                                                  
       SET @RetMsg ='Error Occurred - ' + Error_message() + '.'                          
-  END catch 
-GO
-
-
+  END catch

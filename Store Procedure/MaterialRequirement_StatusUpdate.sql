@@ -314,28 +314,28 @@ WHEN MATCHED THEN
 UPDATE SET
     T.Pending_Qty =
         CASE
-            WHEN S.Length > 900
+            WHEN S.Length >= 900
                 THEN ISNULL(T.Pending_Qty,0) + S.Qty
             ELSE
                 ISNULL(T.Pending_Qty,0)
         END,
     T.Total_Qty =
         CASE
-            WHEN S.Length > 900
+            WHEN S.Length >= 900
                 THEN ISNULL(T.Total_Qty,0) + S.Qty
             ELSE
                 ISNULL(T.Total_Qty,0)
         END,
     T.Scrap_Qty =
         CASE
-            WHEN S.Length <= 900
+            WHEN S.Length < 900
                 THEN ISNULL(T.Scrap_Qty,0) + S.Qty
             ELSE
                 ISNULL(T.Scrap_Qty,0)
         END,
     T.Scrap_Settle =
         CASE
-            WHEN S.Length <= 900
+            WHEN S.Length < 900
                 THEN ISNULL(T.Scrap_Settle,0) + S.Qty
             ELSE
                 ISNULL(T.Scrap_Settle,0)
@@ -366,19 +366,19 @@ WHEN NOT MATCHED THEN
         S.Stype,
         0,
         CASE 
-            WHEN S.Length > 900 THEN S.Qty
+            WHEN S.Length >= 900 THEN S.Qty
             ELSE 0
         END,
         CASE 
-            WHEN S.Length > 900 THEN S.Qty
+            WHEN S.Length >= 900 THEN S.Qty
             ELSE 0
         END,
         CASE 
-            WHEN S.Length <= 900 THEN S.Qty
+            WHEN S.Length < 900 THEN S.Qty
             ELSE 0
         END,
         CASE 
-            WHEN S.Length <= 900 THEN S.Qty
+            WHEN S.Length < 900 THEN S.Qty
             ELSE 0
         END,
         S.Length, 

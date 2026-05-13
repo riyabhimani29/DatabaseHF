@@ -1,13 +1,10 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[BOM_Request_Get]    Script Date: 27-04-2026 11:00:29 ******/
+/****** Object:  StoredProcedure [dbo].[BOM_Request_Get]    Script Date: 13-05-2026 11:20:49 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
 
 
 ALTER PROCEDURE [dbo].[BOM_Request_Get]
@@ -42,7 +39,7 @@ BEGIN
             Pmst.PO_Date as [Date],
             P.Project_Id,
             P.Project_Name,
-            MR.MR_Code,
+            Pdtl2.MR_Code,
             Msd.SupItem_Code,
             Ms.Supplier_Name,
             ISNULL(Ms.Supplier_Id, 0) AS Supplier_Id,
@@ -62,7 +59,8 @@ BEGIN
             Pdtl2.Weight,
             Pdtl2.TotalWeight,
             Pdtl2.Width,
-            Pdtl2.Length_Mtr AS Length_Meter
+            Pdtl2.Length_Mtr AS Length_Meter,
+            ISNULL(Pdtl2.Pd_Ref_No,'') AS Pd_Ref_No
             
 
           FROM  PR_DTL Pdtl2
@@ -261,7 +259,4 @@ BEGIN
 
 END
 END
-
-GO
-
 

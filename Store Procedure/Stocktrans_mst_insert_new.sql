@@ -1,13 +1,10 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[Stocktrans_mst_insert_new]    Script Date: 27-04-2026 15:01:56 ******/
+/****** Object:  StoredProcedure [dbo].[Stocktrans_mst_insert_new]    Script Date: 13-05-2026 11:08:32 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
 
 ALTER  PROCEDURE [dbo].[Stocktrans_mst_insert_new] @Trans_Type           VARCHAR (500),  
                                                    @FrGodown_Id          INT,  
@@ -51,7 +48,7 @@ AS
                    is_prodept,  
                    trans_type)  
       VALUES      ( @FrGodown_Id,  
-                    @TransDate,  
+                    dbo.Get_sysdate(),  
                     @ToGodown_Id,  
                     @IssueBy,  
                     @ReceiveBy,  
@@ -911,6 +908,3 @@ AS
       -- 0 IS FOR ERROR                                                              
       SET @RetMsg ='Error Occurred - ' + Error_message() + '.'  
   END catch
-GO
-
-

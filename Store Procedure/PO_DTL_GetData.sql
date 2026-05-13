@@ -1,13 +1,10 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[PO_DTL_GetData]    Script Date: 27-04-2026 13:10:03 ******/
+/****** Object:  StoredProcedure [dbo].[PO_DTL_GetData]    Script Date: 13-05-2026 11:19:30 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
 ALTER PROCEDURE [dbo].[PO_DTL_GetData]          
 @PO_Id  int = 1002          
           
@@ -54,7 +51,8 @@ SET NOCOUNT ON
    PO_DTL.Width  ,
    PO_DTL.Charg_Height,
    PO_DTL.Charg_Weight,
-   PO_DTL.Ref_Code
+   PO_DTL.Ref_Code,
+   ISNULL(PO_DTL.Pd_Ref_No,'') AS Pd_Ref_No
  From PO_DTL With (NOLOCK)    
  Cross Apply (  
  select sum(ISNULL(GRN_Dtl.ReceiveQty,0)) AS ReceiveQty from GRN_Dtl  With (NOLOCK) where GRN_Dtl.PODtl_Id  = PO_DTL.PODtl_Id  
@@ -73,6 +71,3 @@ SET NOCOUNT ON
  --And PO_MST.Supplier_Id = case when @Supplier_Id =0 then PO_MST.Supplier_Id else @Supplier_Id end                         
  --AND PO_MST.PO_Type =case when @PO_Type = '' then PO_MST.PO_Type else @PO_Type end                        
  order by  PO_MST.PO_Id desc 
-GO
-
-

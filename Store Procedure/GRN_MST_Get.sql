@@ -1,13 +1,10 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[GRN_MST_Get]    Script Date: 27-04-2026 11:37:16 ******/
+/****** Object:  StoredProcedure [dbo].[GRN_MST_Get]    Script Date: 13-05-2026 11:05:57 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
 
 
 
@@ -178,7 +175,7 @@ SELECT  ROW_NUMBER() OVER( ORDER BY GRN_Dtl.PODtl_Id) AS SrNo,
    GRN_Dtl.Length_Meter,
    GRN_Dtl.[Weight],                             
    GRN_Dtl.TotalWeight,                              
-   GRN_Dtl.UnitCost,                              
+   GRN_Dtl.ReceiveCost AS UnitCost,                              
    GRN_Dtl.ReceiveCost,                              
    GRN_Dtl.TotalCost,                            
    GRN_Dtl.Remark , 
@@ -209,6 +206,3 @@ SELECT  ROW_NUMBER() OVER( ORDER BY GRN_Dtl.PODtl_Id) AS SrNo,
  left join M_Godown_Rack  With (NOLOCK) On GRN_Dtl.Rack_Id = M_Godown_Rack.Rack_Id      
  where GRN_Mst.Dept_ID = (case when @Dept_ID = 0 then GRN_Mst.Dept_ID else @Dept_ID end )                
  AND GRN_Mst.GRN_Type = @GRNType
-GO
-
-

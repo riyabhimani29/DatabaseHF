@@ -1,16 +1,10 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[M_Item_GetStock]    Script Date: 27-04-2026 12:21:55 ******/
+/****** Object:  StoredProcedure [dbo].[M_Item_GetStock]    Script Date: 13-05-2026 11:04:56 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
-
-
-
 ALTER PROCEDURE [dbo].[M_Item_GetStock] @Dept_ID       INT = 1,  
                                          @Item_Group_Id INT =0,  
                                          @Item_Cate_Id  INT =0,  
@@ -44,7 +38,11 @@ BEGIN
     StockView.total_qty,
     StockView.sales_qty,
     StockView.Freeze_Qty,
-    M_Item.Avg_Cost as AverageCost,
+           CASE 
+    WHEN ISNULL(M_Item.Avg_Cost, 0) = 0 
+        THEN ISNULL(M_Item.Item_Rate, 0)
+    ELSE M_Item.Avg_Cost
+END AS AverageCost,
     /* Adjusted Pending Qty */
     CASE
         WHEN @FilterDate <> '9999-12-31'
@@ -152,12 +150,8 @@ BEGIN
     unit.Master_Vals AS unit,
     alternate_unit.Master_Vals AS alternate_unit,
     Stk_Limit,
-    CASE 
-    WHEN ISNULL(M_Item.Avg_Cost, 0) = 0 
-        THEN ISNULL(M_Item.Item_Rate, 0)
-    ELSE M_Item.Avg_Cost
-END AS Rate
-    --M_Item.Item_Rate AS Rate
+    
+    M_Item.Item_Rate AS Rate
 
 FROM StockView WITH (NOLOCK)
 
@@ -465,7 +459,11 @@ BEGIN
     StockView.total_qty,
     StockView.sales_qty,
     StockView.Freeze_Qty,
-    M_Item.Avg_Cost as AverageCost,
+           CASE 
+    WHEN ISNULL(M_Item.Avg_Cost, 0) = 0 
+        THEN ISNULL(M_Item.Item_Rate, 0)
+    ELSE M_Item.Avg_Cost
+END AS AverageCost,
     /* Adjusted Pending Qty */
     CASE
         WHEN @FilterDate <> '9999-12-31'
@@ -573,11 +571,8 @@ BEGIN
     unit.Master_Vals AS unit,
     alternate_unit.Master_Vals AS alternate_unit,
     Stk_Limit,
-       CASE 
-    WHEN ISNULL(M_Item.Avg_Cost, 0) = 0 
-        THEN ISNULL(M_Item.Item_Rate, 0)
-    ELSE M_Item.Avg_Cost
-END AS Rate
+      M_Item.Item_Rate as Rate
+         
     
 
 FROM StockView WITH (NOLOCK)
@@ -938,12 +933,12 @@ END
         alternate_unit.Master_Vals as alternate_unit,
 		Stk_Limit,
         StockView.Freeze_Qty,
+          M_Item.Item_Rate as Rate,
            CASE 
     WHEN ISNULL(M_Item.Avg_Cost, 0) = 0 
         THEN ISNULL(M_Item.Item_Rate, 0)
     ELSE M_Item.Avg_Cost
-END AS Rate,
-        M_Item.Avg_Cost as AverageCost
+END AS AverageCost
     FROM   StockView WITH (nolock)  
         outer apply (select distinct GRN_Dtl.Stock_Id,  
              M_Project.Project_Name  
@@ -1057,12 +1052,12 @@ END AS Rate,
         alternate_unit.Master_Vals as alternate_unit,
 		Stk_Limit,
         StockView.Freeze_Qty,
+      M_Item.Item_Rate as Rate,
            CASE 
     WHEN ISNULL(M_Item.Avg_Cost, 0) = 0 
         THEN ISNULL(M_Item.Item_Rate, 0)
     ELSE M_Item.Avg_Cost
-END AS Rate,
-        M_Item.Avg_Cost as AverageCost
+END AS AverageCost
    --Tbl_Stk.Project_Name    
    FROM   StockView WITH (nolock)   
      LEFT JOIN m_godown WITH (nolock) ON StockView.godown_id = m_godown.godown_id  
@@ -1176,12 +1171,12 @@ END AS Rate,
         alternate_unit.Master_Vals as alternate_unit,
 		Stk_Limit,
         StockView.Freeze_Qty,
+         M_Item.Item_Rate as Rate,
            CASE 
     WHEN ISNULL(M_Item.Avg_Cost, 0) = 0 
         THEN ISNULL(M_Item.Item_Rate, 0)
     ELSE M_Item.Avg_Cost
-END AS Rate,
-        M_Item.Avg_Cost as AverageCost
+END AS AverageCost
     FROM   stockview WITH (nolock)  
         OUTER apply (SELECT DISTINCT grn_dtl.stock_id,  
              m_project.project_name  
@@ -1294,12 +1289,12 @@ END AS Rate,
         alternate_unit.Master_Vals as alternate_unit,
 		Stk_Limit,
         StockView.Freeze_Qty,
+     M_Item.Item_Rate as Rate,
            CASE 
     WHEN ISNULL(M_Item.Avg_Cost, 0) = 0 
         THEN ISNULL(M_Item.Item_Rate, 0)
     ELSE M_Item.Avg_Cost
-END AS Rate,
-        M_Item.Avg_Cost as AverageCost
+END AS AverageCost
     --Tbl_Stk.Project_Name    
     FROM   StockView WITH (nolock)  
         /* outer apply (select distinct GRN_Dtl.Stock_Id, M_Project.Project_Name    

@@ -1,13 +1,10 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[PO_MST_Insert_Hardware]    Script Date: 27-04-2026 14:21:18 ******/
+/****** Object:  StoredProcedure [dbo].[PO_MST_Insert_Hardware]    Script Date: 13-05-2026 11:16:05 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
 
 ALTER PROCEDURE [dbo].[PO_MST_Insert_Hardware]                  
             @PO_Id              INT, 
@@ -67,7 +64,8 @@ AS
             @_Remark        AS VARCHAR(500)= '',                
             @_Width         AS NUMERIC(18, 3) = 0,                
             @_Thickness     AS NUMERIC(18, 3) = 0,
-            @Req_Id INT = 0
+            @Req_Id INT = 0,
+            @_Pd_Ref_No     AS VARCHAR(550)=''
     DECLARE @_Financial_Year AS INT = 0                
     Declare @_Is_AutoNo as BIT = 0           
     SET @Year_Id = dbo.Get_financial_yearid(CONVERT (DATE, @PO_Date))                
@@ -247,7 +245,8 @@ AS
                              remark,                
                              width,                
                              thickness,
-                             Req_Id
+                             Req_Id,
+                             Pd_Ref_No
 
                            
                              
@@ -256,7 +255,7 @@ AS
                     OPEN purchase_cur                
                 
                     FETCH next FROM purchase_cur INTO @_Item_Group_Id, @_Item_Cate_Id, @_Item_Id , @_SupDetail_Id, @_OrderQty,@Discount_Percentage, @_Unit_Id,                 
-      @_Length, @_Weight, @_TotalWeight , @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness,@Req_Id                
+      @_Length, @_Weight, @_TotalWeight , @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness,@Req_Id,@_Pd_Ref_No                
                 
                     WHILE @@FETCH_STATUS = 0                
          BEGIN                
@@ -279,7 +278,8 @@ AS
      remark,                
                                        width,                
                                        thickness,
-                                       Req_Id)                
+                                       Req_Id,
+                                       Pd_Ref_No)                
                           VALUES     ( 
                                        @RetVal,                
                                        @_Item_Group_Id,
@@ -298,11 +298,12 @@ AS
                                        @_Remark,                
                                        @_Width,                
                                        @_Thickness,
-                                       @Req_Id)                
+                                       @Req_Id,
+                                       @_Pd_Ref_No)                
                 
                           FETCH next FROM purchase_cur INTO  @_Item_Group_Id, @_Item_Cate_Id, @_Item_Id , @_SupDetail_Id, @_OrderQty,@Discount_Percentage,                 
            @_Unit_Id, @_Length, @_Weight, @_TotalWeight , @_UnitCost, @_TotalCost, @_Project_Id,                 
-           @_Remark, @_Width, @_Thickness,@Req_Id              
+           @_Remark, @_Width, @_Thickness,@Req_Id,@_Pd_Ref_No              
                       END                
                 
                     CLOSE purchase_cur;                
@@ -430,7 +431,8 @@ END
             Project_Id,
             Remark,
             Width,
-            Thickness
+            Thickness,
+            Pd_Ref_No
         )
         SELECT
             @PO_Id,
@@ -449,7 +451,8 @@ END
             Project_Id,
             Remark,
             Width,
-            Thickness
+            Thickness,
+            Pd_Ref_No
         FROM @DtlPara
 
 
@@ -663,7 +666,8 @@ AND GM.GRN_TYPE <> 'DC-GRN'
     remark,                
     width,                
     thickness,
-    Req_Id
+    Req_Id,
+    Pd_Ref_No
   FROM   @DtlPara  where podtl_id = (case when @Type = 'Revision' then podtl_id else 0 end )  ;                
                 
   OPEN purchase_cur                
@@ -671,7 +675,7 @@ AND GM.GRN_TYPE <> 'DC-GRN'
   FETCH next FROM purchase_cur INTO @_PODtl_Id, @_Item_Group_Id,                
   @_Item_Cate_Id, @_Item_Id, @_SupDetail_Id, @_OrderQty,@Discount_Percentage, @_Unit_Id ,                
   @_Length , @_Weight, @_TotalWeight, @_UnitCost, @_TotalCost, @_Project_Id,                
-  @_Remark, @_Width, @_Thickness,@Req_Id               
+  @_Remark, @_Width, @_Thickness,@Req_Id,@_Pd_Ref_No               
                 
   WHILE @@FETCH_STATUS = 0                
   BEGIN                
@@ -696,7 +700,8 @@ AND GM.GRN_TYPE <> 'DC-GRN'
    remark,                
    width,                
    thickness,
-   Req_Id)                
+   Req_Id,
+   Pd_Ref_No)                
    VALUES (@Discount_Percentage,
    @RetVal,   
    @_Item_Group_Id,
@@ -716,7 +721,8 @@ AND GM.GRN_TYPE <> 'DC-GRN'
    @_Remark,                
    @_Width,                
    @_Thickness,
-   @Req_Id)                
+   @Req_Id,
+   @_Pd_Ref_No)                
    END                
   ELSE                
   BEGIN                
@@ -756,14 +762,15 @@ ON GRN_Dtl.GRN_ID = GM.GRN_ID
     [totalcost] = @_TotalCost,                
     [width] = @_Width,                
     [thickness] = @_Thickness,                
-    [remark] = @_Remark                
+    [remark] = @_Remark,
+    [Pd_Ref_No] = @_Pd_Ref_No
     WHERE  podtl_id = @_PODtl_Id                
   END   
 
 
                 
   FETCH next FROM purchase_cur INTO  @_PODtl_Id, @_Item_Group_Id, @_Item_Cate_Id, @_Item_Id, @_SupDetail_Id, @_OrderQty,@Discount_Percentage,                
-  @_Unit_Id , @_Length , @_Weight, @_TotalWeight, @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness,@Req_Id                
+  @_Unit_Id , @_Length , @_Weight, @_TotalWeight, @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness,@Req_Id ,@_Pd_Ref_No               
   END                
                 
   CLOSE purchase_cur;  
@@ -814,6 +821,3 @@ END
     SET @RetMsg ='Error Occurred - ' + Error_message() + '.'                
 END catch                
 END
-GO
-
-

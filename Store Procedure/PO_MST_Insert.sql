@@ -1,13 +1,10 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[PO_MST_Insert]    Script Date: 27-04-2026 13:16:07 ******/
+/****** Object:  StoredProcedure [dbo].[PO_MST_Insert]    Script Date: 13-05-2026 11:18:18 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
 
 
 
@@ -68,7 +65,8 @@ AS
             @_Project_Id    AS INT= 0,      
             @_Remark        AS VARCHAR(500)= '',      
             @_Width         AS NUMERIC(18, 3) = 0,      
-            @_Thickness     AS NUMERIC(18, 3) = 0      
+            @_Thickness     AS NUMERIC(18, 3) = 0,
+            @_Pd_Ref_No     AS VARCHAR(550)=''
     DECLARE @_Financial_Year AS INT = 0      
     Declare @_Is_AutoNo as BIT = 0      
       
@@ -251,13 +249,14 @@ AS
                              Project_Id,      
                              Remark,      
                              Width,      
-                             Thickness      
+                             Thickness,
+                             Pd_Ref_No
                       FROM   @DtlPara;      
       
                     OPEN purchase_cur      
       
                     FETCH next FROM purchase_cur INTO @_Req_Id, @_Item_Group_Id, @_Item_Cate_Id, @_Item_Id , @_SupDetail_Id, @_OrderQty,@Discount_Percentage, @_Unit_Id, @_Length, @_Weight, @_TotalWeight ,      
-                    @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness      
+                    @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness ,@_Pd_Ref_No     
       
                     WHILE @@FETCH_STATUS = 0      
                       BEGIN      
@@ -277,7 +276,8 @@ AS
                                        Project_Id,      
                                        Remark,      
                                        Width,      
-                                       Thickness)      
+                                       Thickness,
+                                       Pd_Ref_No)      
                           VALUES      ( @RetVal, /*@_Item_Group_Id,@_Item_Cate_Id,*/      
                           @_Req_Id,
                                         @_Item_Id,      
@@ -293,12 +293,13 @@ AS
                                         @_Project_Id,      
                                         @_Remark,      
                                         @_Width,      
-                                        @_Thickness )     
+                                        @_Thickness,
+                                        @_Pd_Ref_No)     
                                         
                                         UPDATE BOM_PO_RequestDtl SET Is_Requested = 2 WHERE BOM_PO_ReqDtl_Id = @_Req_Id;
       
                           FETCH next FROM purchase_cur INTO @_Req_Id, @_Item_Group_Id, @_Item_Cate_Id, @_Item_Id , @_SupDetail_Id, @_OrderQty,@Discount_Percentage, @_Unit_Id, @_Length, @_Weight, @_TotalWeight ,      
-                          @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness      
+                          @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness, @_Pd_Ref_No      
                       END      
       
                     CLOSE purchase_cur;      
@@ -427,7 +428,8 @@ END
             Project_Id,
             Remark,
             Width,
-            Thickness
+            Thickness,
+            Pd_Ref_No
         )
         SELECT
             @PO_Id,
@@ -446,7 +448,8 @@ END
             Project_Id,
             Remark,
             Width,
-            Thickness
+            Thickness,
+            Pd_Ref_No
         FROM @DtlPara
 
 
@@ -662,14 +665,15 @@ END
                              Project_Id,      
                              Remark,      
                              Width,      
-                             Thickness      
+                             Thickness,
+                             Pd_Ref_No
                       FROM   @DtlPara      
                    where  PODtl_Id = ( case when @Type = 'Revision' then PODtl_Id else 0 end );      
       
                     OPEN purchase_cur      
       
                     FETCH next FROM purchase_cur INTO @_PODtl_Id, @_Item_Group_Id, @_Item_Cate_Id, @_Item_Id, @_SupDetail_Id, @_OrderQty,@Discount_Percentage, @_Unit_Id , @_Length ,      
-                    @_Weight, @_TotalWeight, @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness      
+                    @_Weight, @_TotalWeight, @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness ,@_Pd_Ref_No     
       
                     WHILE @@FETCH_STATUS = 0      
                       BEGIN      
@@ -692,7 +696,8 @@ END
                                              Project_Id,      
                                              Remark,      
                                              Width,      
-                                             Thickness)      
+                                             Thickness,
+                                             Pd_Ref_No)      
                                 VALUES      ( @Discount_Percentage,@RetVal,      
                                               0,      
                                               0,      
@@ -709,7 +714,8 @@ END
                                               @_Project_Id,      
                                               @_Remark,      
                                               @_Width,      
-                                              @_Thickness )      
+                                              @_Thickness,
+                                              @_Pd_Ref_No)      
                             END      
                           ELSE      
                             BEGIN      
@@ -747,12 +753,13 @@ END
                                        [TotalCost] = @_TotalCost,      
                                        [Width] = @_Width,      
                                        [Thickness] = @_Thickness,      
-                                       [Remark] = @_Remark      
+                                       [Remark] = @_Remark,
+                                       [Pd_Ref_No] = @_Pd_Ref_No
                                 WHERE  PODtl_Id = @_PODtl_Id      
               END      
       
                           FETCH next FROM purchase_cur INTO @_PODtl_Id, @_Item_Group_Id, @_Item_Cate_Id, @_Item_Id, @_SupDetail_Id, @_OrderQty,@Discount_Percentage, @_Unit_Id , @_Length ,      
-                          @_Weight, @_TotalWeight, @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness      
+                          @_Weight, @_TotalWeight, @_UnitCost, @_TotalCost, @_Project_Id, @_Remark, @_Width, @_Thickness,@_Pd_Ref_No      
                       END      
       
                     CLOSE purchase_cur;      
@@ -799,7 +806,4 @@ END
               SET @RetMsg ='Error Occurred - ' + Error_message() + '.'      
           END catch      
       END
-
-GO
-
 

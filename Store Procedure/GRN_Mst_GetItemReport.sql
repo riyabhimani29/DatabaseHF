@@ -1,13 +1,10 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[GRN_Mst_GetItemReport]    Script Date: 27-04-2026 11:38:24 ******/
+/****** Object:  StoredProcedure [dbo].[GRN_Mst_GetItemReport]    Script Date: 13-05-2026 11:06:32 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
 ALTER PROCEDURE [dbo].[GRN_Mst_GetItemReport] @Dept_IDs     VARCHAR(max) = '',  
                                               @Supplier_Ids VARCHAR(max) = '',  
                                               @Project_Ids  VARCHAR(max) = '',  
@@ -21,7 +18,7 @@ AS
     SELECT 
             GRN_Mst.DiscountAmountOverall,
            GRN_Mst.DiscountPercentageOverall,
-           GRN_Dtl.UnitCost,
+           GRN_Dtl.ReceiveCost AS UnitCost,
            GRN_Mst.OtherAmount,
            GRN_Mst.GRN_Id,  
            GRN_Mst.GRN_Type,  
@@ -111,6 +108,3 @@ AS
                        AND dbo.GRN_Dtl.Item_Id IN (SELECT items FROM   dbo.Stsplit(@Item_Ids) ) )  
                )  
     ORDER  BY M_Item.Item_Name ASC
-GO
-
-

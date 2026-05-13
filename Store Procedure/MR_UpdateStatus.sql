@@ -1,10 +1,8 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[MR_UpdateStatus]    Script Date: 07-05-2026 18:50:26 ******/
+/****** Object:  StoredProcedure [dbo].[MR_UpdateStatus]    Script Date: 13-05-2026 11:11:36 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
 
@@ -46,11 +44,11 @@ BEGIN
             SELECT 1
             FROM MaterialRequirement WITH (NOLOCK)
             WHERE MR_Id = @MR_Id
-                  AND MR_Type = 'D'
+                  AND (MR_Type = 'D' OR MR_Type = 'R')
         )
         BEGIN
             SET @RetVal = -102
-            SET @RetMsg = 'Only Draft MR Can Be Deleted.'
+            SET @RetMsg = 'Only Draft OR Rejected MR Can Be Deleted.'
             ROLLBACK TRANSACTION
             RETURN
         END
@@ -79,6 +77,3 @@ BEGIN
     END CATCH
 
 END
-GO
-
-

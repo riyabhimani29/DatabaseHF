@@ -14,7 +14,7 @@ ALTER PROCEDURE [dbo].[UpdatePRProject]
 (
     @Project_Id INT,
     @PRDtl_Id INT,
-
+    @Pd_Ref_No VARCHAR(550)='',
     @RetVal INT = 0 OUT,
     @RetMsg VARCHAR(500) = '' OUT
 )
@@ -84,7 +84,7 @@ BEGIN
         -- UPDATE PROJECT
         UPDATE PR_DTL
         SET
-            Project_Id = @Project_Id
+            Project_Id = @Project_Id,Pd_Ref_No = @Pd_Ref_No
         WHERE PRDtl_Id = @PRDtl_Id;
 
 

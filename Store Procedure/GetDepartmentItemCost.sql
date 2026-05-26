@@ -9,23 +9,15 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 
+
+
 ALTER PROCEDURE [dbo].[GetDepartmentItemCost]
     @Project_Id INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- ? CTE must be declared once at top
---    WITH LatestGRN AS
-   -- (
-     --   SELECT 
-       --     GD.*,
-        --    ROW_NUMBER() OVER (
-        --        PARTITION BY GD.Item_Id 
-        --        ORDER BY GD.GRN_Id DESC
-      --      ) AS RN
-  --      FROM GRN_Dtl GD
-  --  )
+    
 
     ---------------------------------------
     -- 1. MATERIAL REQUIREMENT
@@ -67,9 +59,55 @@ BEGIN
       AND MR_Type = 'A'
       AND M.Dept_ID <> 1
 
+
+    UNION ALL
+
+    ---------------------------------------
+    -- 2. MATERIAL REQUIREMENT FOR NON-COATED
+    ---------------------------------------
+    SELECT 
+        M.MR_CODE as Document_No,
+        M.Project_Id,
+        MP.Project_Name,
+        M.Dept_ID,
+        MD.Dept_Name,
+        MRI.Item_Id,
+        ISNULL(MI.Item_Rate, 0) AS UnitCost,
+        MRI.Qty as Qty,
+        MRI.Qty AS Quantity_Consumed,
+        MI.Item_Name,
+        MI.Item_Code,
+        MM.Master_Vals,
+        0 AS GrossAmount,
+        0 AS CGSTTotal,
+        0 AS SGSTTotal,
+        0 AS IGSTTotal,
+        0 AS NetAmount,
+        0 AS AdvanceAmount,
+        0 AS Admin_Charges,
+        0 AS Insurance,
+        0 AS Other_Charges,
+        0 AS Freight_Charges,
+        0 AS DiscountAmount
+
+
+    FROM MaterialRequirement M
+    LEFT JOIN MR_Items MRI ON M.MR_Id = MRI.MR_Id
+    LEFT JOIN M_Project MP ON MP.Project_Id = M.Project_Id
+    LEFT JOIN M_Item MI ON MRI.Item_Id = MI.Item_Id
+    LEFT JOIN M_Master MM ON MI.Unit_Id = MM.Master_Id
+    LEFT JOIN M_Department MD ON MD.Dept_ID = M.Dept_ID
+
+    WHERE M.Project_Id = @Project_Id
+              AND M.Dept_ID = 1
+              AND M.MR_Type = 'A'
+              AND M.Is_Job_Work = 'Mill-Finished'
+
+
+
     ---------------------------------------
     UNION ALL
-    -- 2. DC + GRN
+    -- 3. DC + GRN
     ---------------------------------------
     SELECT
 DM.DC_No as Document_No,
@@ -111,7 +149,7 @@ AND DM.CODC_Type = 'F'
 
     ---------------------------------------
     UNION ALL
-    -- 3. GLASS OUTWARD (PO)
+    -- 4. GLASS OUTWARD (PO)
     ---------------------------------------
 SELECT 
     PM.OrderNo as Document_No,
@@ -151,7 +189,7 @@ WHERE PD.Project_Id = @Project_Id
 
     ---------------------------------------
     UNION ALL
-    -- 4. SAFETY TOOLS
+    -- 5. SAFETY TOOLS
     ---------------------------------------
     SELECT
         SFT.Outward_No  as Document_No,
@@ -191,8 +229,5 @@ WHERE PD.Project_Id = @Project_Id
     ---------------------------------------
     ORDER BY Dept_ID
 END
-
-
-GO
 
 

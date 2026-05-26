@@ -1,12 +1,11 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[Coating_Req_Get]    Script Date: 27-04-2026 11:09:03 ******/
+/****** Object:  StoredProcedure [dbo].[Coating_Req_Get]    Script Date: 26-05-2026 18:20:53 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 
 
@@ -32,7 +31,7 @@ BEGIN
             M_Project.Project_Name,
             Coating_Request.[Date],
             BOM_MST.Quotation_Number,
-            BOM_MST.Ref_Document_No,
+            MR_Header.Mr_code as Ref_Document_No,
             Coating_Dtl.Details
         FROM Coating_Request
         JOIN M_Department ON Coating_Request.Dept_ID = M_Department.Dept_ID
@@ -42,7 +41,8 @@ BEGIN
     SELECT TOP 1
         MR.Site_Engineer,
         MR.Coating_Colour,
-        MR.Pd_Ref_No
+        MR.Pd_Ref_No,
+        MR.MR_Code
     FROM Coating_RequestDtl CRD
     JOIN MR_Items MRI ON CRD.BOM_Dtl_Id = MRI.MR_Items_Id
     JOIN MaterialRequirement MR ON MRI.MR_Id = MR.MR_Id
@@ -87,7 +87,8 @@ BEGIN
                 --AND SV.Godown_Id = MR_Items.Godown_Id AND SV.Rack_Id = MR_Items.Godown_Rack_Id
                 and (MR_Items.Stock_Id = 0 OR SV.Id = MR_Items.Stock_Id)
                 )
-                AS Stock_Id
+                AS Stock_Id,
+                MR_Items.Is_Job_Work
             FROM Coating_RequestDtl
             JOIN MR_Items ON Coating_RequestDtl.BOM_Dtl_Id = MR_Items.MR_Items_Id
             LEFT JOIN MaterialRequirement ON MR_Items.MR_Id = MaterialRequirement.MR_Id
@@ -126,6 +127,3 @@ BEGIN
         FOR JSON PATH, INCLUDE_NULL_VALUES
     ) AS json;
 END
-GO
-
-

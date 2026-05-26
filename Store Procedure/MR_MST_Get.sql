@@ -1,13 +1,10 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[MR_MST_Get]    Script Date: 27-04-2026 12:53:00 ******/
+/****** Object:  StoredProcedure [dbo].[MR_MST_Get]    Script Date: 26-05-2026 18:33:42 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
 
 
 ALTER  PROCEDURE [dbo].[MR_MST_Get]    
@@ -64,6 +61,7 @@ AS
     authorize_emp.Company_No as Authorised_By_Phone,
     MaterialRequirement.Checked_Date,
     MaterialRequirement.Authorised_Date,
+    ISNULL(MaterialRequirement.Is_Job_Work,0) AS Is_Job_Work,
     (SELECT
 MR_Items_Id,
    MR_Items.UnitCost AS UnitCost,
@@ -185,8 +183,5 @@ ORDER BY MaterialRequirement.MR_Id DESC
         FOR JSON PATH) as json
 
 
-
-
-GO
 
 

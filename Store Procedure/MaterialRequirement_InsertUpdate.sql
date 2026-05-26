@@ -1,14 +1,10 @@
 USE [db_a8637c_hifaberp]
 GO
-
-/****** Object:  StoredProcedure [dbo].[MaterialRequirement_InsertUpdate]    Script Date: 27-04-2026 12:50:44 ******/
+/****** Object:  StoredProcedure [dbo].[MaterialRequirement_InsertUpdate]    Script Date: 26-05-2026 18:25:05 ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
-
-
 
 ALTER PROCEDURE [dbo].[MaterialRequirement_InsertUpdate]
     @MR_Id INT,
@@ -33,6 +29,7 @@ ALTER PROCEDURE [dbo].[MaterialRequirement_InsertUpdate]
     @Authorised_By INT,
     @Authorised_Date DATETIME = NULL,
     @Checked_Date DATETIME = NULL,
+    @_Is_Job_Work NVARCHAR(50) = '',
     @Entry_User NVARCHAR(50),
     @Upd_User NVARCHAR(50),
    @DtlPara dbo.MR_Items_Typess READONLY, -- Table-valued parameter for MR_Items
@@ -56,7 +53,49 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        -- Convert Entry_User to Entry_User_Id
+         IF (@Dept_ID = 1)
+BEGIN
+    DECLARE @ErrorItems NVARCHAR(MAX);
+
+    ;WITH InvalidItems AS
+    (
+        SELECT
+            MI.Item_Code,
+            AvailableQty =
+                ISNULL(SV.Pending_Qty, 0) - ISNULL(SV.Freeze_Qty, 0),
+            RequiredQty =
+                ISNULL(D.Qty, 0)
+        FROM @DtlPara D
+        INNER JOIN StockView SV
+            ON SV.Id = D.Stock_Id
+        INNER JOIN M_Item MI
+            ON MI.Item_Id = SV.Item_Id
+        WHERE ISNULL(D.IsCustom, 0) = 0
+          AND (
+                ISNULL(SV.Pending_Qty, 0)
+                - ISNULL(SV.Freeze_Qty, 0)
+              ) < ISNULL(D.Qty, 0)
+    )
+    SELECT
+        @ErrorItems =
+            STRING_AGG(
+                'Item ' + Item_Code +
+                ' (Available Qty: ' + CAST(AvailableQty AS NVARCHAR(50)) +
+                ', Required Qty: ' + CAST(RequiredQty AS NVARCHAR(50)) + ')',
+                '; '
+            )
+    FROM InvalidItems;
+
+    IF @ErrorItems IS NOT NULL
+    BEGIN
+        SET @RetVal = -1;
+        SET @RetMsg =
+            'Stock validation failed for the following items: ' + @ErrorItems;
+
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+END
       
 
         -- Get Project_Code and Department_Code
@@ -88,7 +127,7 @@ BEGIN
                 Department_Id, Tentative_Mat_Expected, Prepared_By, Project_Manager,
                 Site_Engineer, Checked_By, Authorised_By, Authorised_Date, Checked_Date,
                 Entry_User, Entry_Date, Upd_User, Upd_Date, MR_Type, Dept_ID,
-                MR_Department, MR_Data_Type
+                MR_Department, MR_Data_Type, Is_Job_Work
             )
             VALUES (
                 @Project_Id, @Quotation_No,@Coating_Colour, @Mat_Delivery_At, @Delivery_Address,@MR_Reason, @Pd_Ref_No,
@@ -103,7 +142,7 @@ BEGIN
                     ELSE @Checked_Date 
                 END,
                 @Entry_User, dbo.Get_sysdate(), @Upd_User, dbo.Get_sysdate(),
-                @MR_Type, @Dept_ID, @MR_Department, @MR_Data_Type
+                @MR_Type, @Dept_ID, @MR_Department, @MR_Data_Type, @_Is_Job_Work
             );
 
             SET @RetVal = SCOPE_IDENTITY();
@@ -192,7 +231,8 @@ BEGIN
 
                 MR_Data_Type = @MR_Data_Type,
                 Upd_User = @Upd_User,
-                Upd_Date = dbo.Get_sysdate()
+                Upd_Date = dbo.Get_sysdate(),
+                Is_Job_Work= @_Is_Job_Work
             WHERE MR_Id = @MR_Id;
 
             SET @RetVal = @MR_Id;
@@ -395,6 +435,3 @@ END
         SET @RetMsg = 'Error Occurred - ' + ERROR_MESSAGE();
     END CATCH;
 END;
-GO
-
-

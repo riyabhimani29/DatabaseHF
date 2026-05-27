@@ -11,6 +11,8 @@ GO
 
 
 
+
+
 ALTER PROCEDURE [dbo].[MaterialRequirement_StatusUpdate]
     @MR_Id INT,   
     @MR_Type NVARCHAR(2) = '',
@@ -58,9 +60,64 @@ BEGIN
         -- Get Project_Id, Department_Id, and total quantity
         SELECT 
             @Project_Id = Project_Id,
-            @Department_Id = Department_Id
+            @Department_Id = Dept_Id
         FROM MaterialRequirement
         WHERE MR_Id = @MR_Id;
+
+        -----------------------------------------------------------------------
+-- Validation before Approval (MR_Type = 'A')
+-- For Planning Department (Department_Id = 1):
+-- If any non-custom item has insufficient available stock
+-- (Pending_Qty - Freeze_Qty < MR_Items.Qty), stop processing.
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+-- Validation before Approval/Checking
+-- Show all items that have insufficient available stock.
+-----------------------------------------------------------------------
+IF ((@MR_Type = 'A' OR @MR_Type = 'C') AND @Department_Id = 1)
+BEGIN
+    DECLARE @ErrorItems NVARCHAR(MAX);
+
+    ;WITH InvalidItems AS
+    (
+        SELECT
+            M.Item_Code,
+            AvailableQty =
+                ISNULL(SV.Pending_Qty, 0) - ISNULL(SV.Freeze_Qty, 0),
+            RequiredQty =
+                ISNULL(MI.Qty, 0)
+        FROM MR_Items MI
+        INNER JOIN StockView SV
+            ON SV.Id = MI.Stock_Id
+        INNER JOIN M_Item M
+            ON M.Item_Id = MI.Item_Id
+        WHERE MI.MR_Id = @MR_Id
+          AND ISNULL(MI.IsCustom, 0) = 0
+          AND (
+                ISNULL(SV.Pending_Qty, 0)
+                - ISNULL(SV.Freeze_Qty, 0)
+              ) < ISNULL(MI.Qty, 0)
+    )
+    SELECT
+        @ErrorItems =
+            STRING_AGG(
+                'Item ' + Item_Code +
+                ' (Available Qty: ' + CAST(AvailableQty AS NVARCHAR(50)) +
+                ', Required Qty: ' + CAST(RequiredQty AS NVARCHAR(50)) + ')',
+                '; '
+            )
+    FROM InvalidItems;
+
+    IF @ErrorItems IS NOT NULL
+    BEGIN
+        SET @RetVal = -1;
+        SET @RetMsg =
+            'Stock validation failed for the following items: ' + @ErrorItems;
+
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+END
 
         SELECT @TotalQty = SUM(Qty)
         FROM MR_Items
@@ -144,11 +201,7 @@ SELECT
   IF @MR_Type = 'A'
         BEGIN
 -- Split length data add in stock view
-DECLARE @NewStock TABLE
-(
-    MR_Items_Id INT,
-    New_Stock_Id INT
-);
+
 
 -- Only for split items
 IF EXISTS (
@@ -160,76 +213,186 @@ IF EXISTS (
       AND ISNULL(Length, 0) > 0
 )
 BEGIN
-        MERGE StockView AS T
-            USING
+            /* =========================================
+               SOURCE DATA
+            ========================================= */
+
+            DECLARE @Source TABLE
+            (
+                MR_Items_Id INT,
+                Godown_Id INT,
+                Item_Id INT,
+                Qty DECIMAL(18,2),
+                Length DECIMAL(18,2),
+                Width DECIMAL(18,2),
+                Rack_Id INT,
+                Stype VARCHAR(50)
+            );
+
+            INSERT INTO @Source
+            (
+                MR_Items_Id,
+                Godown_Id,
+                Item_Id,
+                Qty,
+                Length,
+                Width,
+                Rack_Id,
+                Stype
+            )
+            SELECT
+                MI.MR_Items_Id,
+                MI.Godown_Id,
+                MI.Item_Id,
+
+                CASE
+                    WHEN MI.Qty > ISNULL(SV.Pending_Qty,0)
+                        THEN ISNULL(SV.Pending_Qty,0)
+                    ELSE MI.Qty
+                END,
+
+                MI.Length,
+                MI.Width,
+                MI.Godown_Rack_Id,
+                SV.Stype
+
+            FROM MR_Items MI
+            INNER JOIN StockView SV
+                ON SV.Id = MI.Stock_Id
+
+            WHERE MI.MR_Id = @MR_Id
+              AND MI.IsChecked = 1
+              AND ISNULL(MI.IsCustom,0) = 0
+              AND ISNULL(MI.Length,0) > 0;
+
+
+             /* =========================================
+               UPDATE EXISTING SPLIT STOCK
+            ========================================= */
+
+            UPDATE T
+            SET
+                T.Pending_Qty = ISNULL(T.Pending_Qty,0) + S.Qty,
+                T.Total_Qty = ISNULL(T.Total_Qty,0) + S.Qty,
+                T.LastUpdate = dbo.Get_sysdate()
+
+            FROM StockView T
+
+            INNER JOIN
             (
                 SELECT
-                    MI.Stock_Id,
-                    MI.MR_Items_Id,
-                    MI.Godown_Id,
-                    MI.Item_Id,
-                   -- MI.Qty,
-                    CASE 
-                    WHEN MI.Qty > ISNULL(SV.Pending_Qty,0)
-                    THEN ISNULL(SV.Pending_Qty,0)
-                    ELSE MI.Qty
-                    END AS Qty,
-                    MI.Length,
-                    MI.Width,
-                    MI.Godown_Rack_Id,
-                    SV.Stype
-                FROM MR_Items MI
-                INNER JOIN StockView SV ON SV.Id = MI.Stock_Id
-                WHERE MI.MR_Id = @MR_Id
-                  AND MI.IsChecked = 1
-                  AND ISNULL(MI.IsCustom,0) = 0 
-                  AND ISNULL(MI.Length,0) > 0
-            ) AS S
-            ON  T.Godown_Id = S.Godown_Id
-            AND T.Item_Id   = S.Item_Id
-            AND T.Length    = S.Length
-            AND T.Width     = S.Width
-            AND T.Rack_Id   = S.Godown_Rack_Id
-            AND T.ID = S.Stock_Id
-
-            WHEN MATCHED THEN
-                UPDATE SET
-                    T.Pending_Qty = ISNULL(T.Pending_Qty,0) + S.Qty,
-                    T.Total_Qty = T.Total_Qty + S.Qty,
-                    T.LastUpdate = dbo.Get_sysdate()
-
-            WHEN NOT MATCHED THEN
-                INSERT
-                (
                     Godown_Id,
                     Item_Id,
-                    Stype,
-                    Total_Qty,
-                    Sales_Qty,
-                    Pending_Qty,
-                    [Length],
+                    Length,
                     Width,
                     Rack_Id,
-                    LastUpdate
-                )
-                VALUES
-                (
-                    S.Godown_Id,
-                    S.Item_Id,
-                    S.Stype,
-                    S.Qty,
-                    0,
-                    S.Qty,
-                    S.Length,
-                    S.Width,
-                    S.Godown_Rack_Id,
-                    dbo.Get_sysdate()
-                )
+                    Stype,
+                    SUM(Qty) Qty
 
-            OUTPUT
+                FROM @Source
+
+                GROUP BY
+                    Godown_Id,
+                    Item_Id,
+                    Length,
+                    Width,
+                    Rack_Id,
+                    Stype
+
+            ) S
+
+                ON T.Godown_Id = S.Godown_Id
+                AND T.Item_Id = S.Item_Id
+                AND T.Length = S.Length
+                AND T.Width = S.Width
+                AND T.Rack_Id = S.Rack_Id
+                AND T.Stype = S.Stype;
+
+
+            /* =========================================
+               INSERT NEW SPLIT STOCK
+            ========================================= */
+
+            INSERT INTO StockView
+            (
+                Godown_Id,
+                Item_Id,
+                Stype,
+                Total_Qty,
+                Sales_Qty,
+                Pending_Qty,
+                Length,
+                Width,
+                Rack_Id,
+                LastUpdate
+            )
+            SELECT
+                S.Godown_Id,
+                S.Item_Id,
+                S.Stype,
+                SUM(S.Qty),
+                0,
+                SUM(S.Qty),
+                S.Length,
+                S.Width,
+                S.Rack_Id,
+                dbo.Get_sysdate()
+
+            FROM @Source S
+
+            WHERE NOT EXISTS
+            (
+                SELECT 1
+                FROM StockView T
+                WHERE T.Godown_Id = S.Godown_Id
+                AND T.Item_Id = S.Item_Id
+                AND T.Length = S.Length
+                AND T.Width = S.Width
+                AND T.Rack_Id = S.Rack_Id
+                AND T.Stype = S.Stype
+            )
+
+            GROUP BY
+                S.Godown_Id,
+                S.Item_Id,
+                S.Stype,
+                S.Length,
+                S.Width,
+                S.Rack_Id;
+
+
+
+        /* =========================================
+           CREATE STOCK MAPPING
+        ========================================= */
+
+            DECLARE @StockMapping TABLE
+            (
+                MR_Items_Id INT,
+                New_Stock_Id INT
+            );
+
+            INSERT INTO @StockMapping
+            (
+                MR_Items_Id,
+                New_Stock_Id
+            )
+            SELECT
                 S.MR_Items_Id,
-                INSERTED.Id        -- ? SAME for update & insert
-            INTO @NewStock (MR_Items_Id, New_Stock_Id);
+                SV.Id
+
+            FROM @Source S
+
+            INNER JOIN StockView SV
+                ON SV.Godown_Id = S.Godown_Id
+                AND SV.Item_Id = S.Item_Id
+                AND SV.Length = S.Length
+                AND SV.Width = S.Width
+                AND SV.Rack_Id = S.Rack_Id
+                AND SV.Stype = S.Stype;
+
+        
+           
 
             --Maintain the Stock transfer history for the split length 
 
@@ -254,7 +417,7 @@ BEGIN
                    SV.Godown_Id,
                    SV.Item_Id,
                    SV.SType,
-                   SV.Pending_Qty,
+                   S.Qty,
                    SV.Length,
                    dbo.Get_sysdate(),
                    SV.Width,
@@ -265,178 +428,323 @@ BEGIN
                    'IN',
                    0,
                    SV.Id
-                FROM @NewStock NS
-                INNER JOIN MR_Items MI ON MI.MR_Items_Id = NS.MR_Items_Id
-                INNER JOIN StockView SV ON SV.Id = NS.New_Stock_Id;
+                FROM @Source S
 
+            INNER JOIN StockView SV
+                ON SV.Godown_Id = S.Godown_Id
+                AND SV.Item_Id = S.Item_Id
+                AND SV.Length = S.Length
+                AND SV.Width = S.Width
+                AND SV.Rack_Id = S.Rack_Id
+                AND SV.Stype = S.Stype;
 
 ----------------------------remaining stock length-----------------------------------------------------
 
-DECLARE @RemainingStock TABLE
-(
-    MR_Items_Id INT,
-    Stock_Id INT
-);
+    /* =========================================
+       SOURCE DATA
+    ========================================= */
 
-MERGE StockView AS T
-USING
-(
+    DECLARE @RemainingSource TABLE
+    (
+        MR_Items_Id INT,
+        Godown_Id INT,
+        Item_Id INT,
+        Qty DECIMAL(18,2),
+        Remaining_Length DECIMAL(18,2),
+        Width DECIMAL(18,2),
+        Rack_Id INT,
+        Stype VARCHAR(50)
+    );
+
+    INSERT INTO @RemainingSource
+    (
+        MR_Items_Id,
+        Godown_Id,
+        Item_Id,
+        Qty,
+        Remaining_Length,
+        Width,
+        Rack_Id,
+        Stype
+    )
     SELECT
-        MI.Stock_Id,
         MI.MR_Items_Id,
         MI.Godown_Id,
         MI.Item_Id,
-        SV.Stype,
-        CASE 
+
+        CASE
             WHEN MI.Qty > ISNULL(SV.Pending_Qty,0)
                 THEN ISNULL(SV.Pending_Qty,0)
             ELSE MI.Qty
-        END AS Qty,
-        (MI.Stock_Length - MI.Length) AS Length,
+        END,
+
+        (MI.Stock_Length - MI.Length),
+
         MI.Width,
-        MI.Godown_Rack_Id
+        MI.Godown_Rack_Id,
+        SV.Stype
+
     FROM MR_Items MI
-    INNER JOIN StockView SV ON SV.Id = MI.Stock_Id
+
+    INNER JOIN StockView SV
+        ON SV.Id = MI.Stock_Id
+
     WHERE MI.MR_Id = @MR_Id
       AND MI.IsChecked = 1
-      AND ISNULL(MI.IsCustom,0) = 0
-      AND (MI.Stock_Length - MI.Length) > 0
-) AS S
+      AND ISNULL(MI.IsCustom,0)=0
+      AND ISNULL(MI.Length,0)>0
+      AND (ISNULL(MI.Stock_Length,0) - ISNULL(MI.Length,0)) > 0
 
-ON  T.Godown_Id = S.Godown_Id
-AND T.Item_Id   = S.Item_Id
-AND T.Length    = S.Length
-AND T.Width     = S.Width
-AND T.Rack_Id   = S.Godown_Rack_Id
-AND T.ID = S.Stock_Id
 
-WHEN MATCHED THEN
-UPDATE SET
-    T.Pending_Qty =
-        CASE
-            WHEN S.Length >= 900
-                THEN ISNULL(T.Pending_Qty,0) + S.Qty
-            ELSE
-                ISNULL(T.Pending_Qty,0)
-        END,
-    T.Total_Qty =
-        CASE
-            WHEN S.Length >= 900
-                THEN ISNULL(T.Total_Qty,0) + S.Qty
-            ELSE
-                ISNULL(T.Total_Qty,0)
-        END,
-    T.Scrap_Qty =
-        CASE
-            WHEN S.Length < 900
-                THEN ISNULL(T.Scrap_Qty,0) + S.Qty
-            ELSE
-                ISNULL(T.Scrap_Qty,0)
-        END,
-    T.Scrap_Settle =
-        CASE
-            WHEN S.Length < 900
-                THEN ISNULL(T.Scrap_Settle,0) + S.Qty
-            ELSE
-                ISNULL(T.Scrap_Settle,0)
-        END,
+    /* =========================================
+       UPDATE EXISTING REMAINING STOCK
+    ========================================= */
 
-    T.LastUpdate = dbo.Get_sysdate()
+    UPDATE T
+    SET
 
-WHEN NOT MATCHED THEN
-    INSERT
+        T.Pending_Qty =
+            CASE
+                WHEN S.Remaining_Length >= 900
+                    THEN ISNULL(T.Pending_Qty,0) + S.Qty
+                ELSE
+                    ISNULL(T.Pending_Qty,0)
+            END,
+
+        T.Total_Qty =
+            CASE
+                WHEN S.Remaining_Length >= 900
+                    THEN ISNULL(T.Total_Qty,0) + S.Qty
+                ELSE
+                    ISNULL(T.Total_Qty,0)
+            END,
+
+        T.Scrap_Qty =
+            CASE
+                WHEN S.Remaining_Length < 900
+                    THEN ISNULL(T.Scrap_Qty,0) + S.Qty
+                ELSE
+                    ISNULL(T.Scrap_Qty,0)
+            END,
+
+        T.Scrap_Settle =
+            CASE
+                WHEN S.Remaining_Length < 900
+                    THEN ISNULL(T.Scrap_Settle,0) + S.Qty
+                ELSE
+                    ISNULL(T.Scrap_Settle,0)
+            END,
+
+        T.LastUpdate = dbo.Get_sysdate()
+
+    FROM StockView T
+
+    INNER JOIN
     (
-        Godown_Id, 
-        Item_Id, 
+        SELECT
+            Godown_Id,
+            Item_Id,
+            Remaining_Length,
+            Width,
+            Rack_Id,
+            Stype,
+            SUM(Qty) Qty
+
+        FROM @RemainingSource
+
+        GROUP BY
+            Godown_Id,
+            Item_Id,
+            Remaining_Length,
+            Width,
+            Rack_Id,
+            Stype
+
+    ) S
+
+        ON T.Godown_Id = S.Godown_Id
+        AND T.Item_Id = S.Item_Id
+        AND T.Length = S.Remaining_Length
+        AND T.Width = S.Width
+        AND T.Rack_Id = S.Rack_Id
+        AND T.Stype = S.Stype;
+
+
+/* =========================================
+       INSERT NEW REMAINING STOCK
+    ========================================= */
+
+    INSERT INTO StockView
+    (
+        Godown_Id,
+        Item_Id,
         Stype,
         Sales_Qty,
         Total_Qty,
         Pending_Qty,
         Scrap_Qty,
         Scrap_Settle,
-        Length, 
-        Width, 
+        Length,
+        Width,
         Rack_Id,
         LastUpdate
     )
-    VALUES
-    (
-        S.Godown_Id, 
-        S.Item_Id, 
+    SELECT
+        S.Godown_Id,
+        S.Item_Id,
         S.Stype,
+
         0,
-        CASE 
-            WHEN S.Length >= 900 THEN S.Qty
+
+        CASE
+            WHEN S.Remaining_Length >= 900
+                THEN SUM(S.Qty)
             ELSE 0
         END,
-        CASE 
-            WHEN S.Length >= 900 THEN S.Qty
+
+        CASE
+            WHEN S.Remaining_Length >= 900
+                THEN SUM(S.Qty)
             ELSE 0
         END,
-        CASE 
-            WHEN S.Length < 900 THEN S.Qty
+
+        CASE
+            WHEN S.Remaining_Length < 900
+                THEN SUM(S.Qty)
             ELSE 0
         END,
-        CASE 
-            WHEN S.Length < 900 THEN S.Qty
+
+        CASE
+            WHEN S.Remaining_Length < 900
+                THEN SUM(S.Qty)
             ELSE 0
         END,
-        S.Length, 
-        S.Width, 
-        S.Godown_Rack_Id,
+
+        S.Remaining_Length,
+        S.Width,
+        S.Rack_Id,
         dbo.Get_sysdate()
+
+    FROM @RemainingSource S
+
+    WHERE NOT EXISTS
+    (
+        SELECT 1
+        FROM StockView T
+        WHERE T.Godown_Id = S.Godown_Id
+        AND T.Item_Id = S.Item_Id
+        AND T.Length = S.Remaining_Length
+        AND T.Width = S.Width
+        AND T.Rack_Id = S.Rack_Id
+        AND T.Stype = S.Stype
     )
 
+    GROUP BY
+        S.Godown_Id,
+        S.Item_Id,
+        S.Stype,
+        S.Remaining_Length,
+        S.Width,
+        S.Rack_Id;
 
 
-OUTPUT
-    S.MR_Items_Id,
-    INSERTED.Id
-INTO @RemainingStock;
+    /* =========================================
+       CREATE STOCK MAPPING
+    ========================================= */
 
-INSERT INTO Stock_Transfer_History
-(
-   Godown_Id,
-   Item_Id,
-   SType,
-   Transfer_Qty,
-   Length,
-   Transfer_Date,
-   Width,
-   Remark,
-   Rack_Id,
-   StockEntryPage,
-   Tbl_Name,
-   Transfer_Type,
-   Transfer_TypeInBit,
-   Stock_Id
-)
-SELECT
-    ST.Godown_Id,
-    ST.Item_Id,
-    ST.SType,
-    MI.Qty,
-    ST.Length,
-    dbo.Get_sysdate(),
-    ST.Width,
-    'MR Split Length Remaining Stock',
-    ST.Rack_Id,
-    'MR Approved',
-    'StockView',
-    'IN',
-    0,
-    ST.Id
-FROM @RemainingStock RS
-INNER JOIN StockView ST ON ST.Id = RS.Stock_Id
-INNER JOIN MR_Items MI ON MI.MR_Items_Id = RS.MR_Items_Id;
+    DECLARE @RemainingStockMapping TABLE
+    (
+        MR_Items_Id INT,
+        Remaining_Stock_Id INT
+    );
 
-UPDATE MI
-SET MI.RemainingStock_Id = RS.Stock_Id
-FROM MR_Items MI
-INNER JOIN @RemainingStock RS
-    ON RS.MR_Items_Id = MI.MR_Items_Id;
+    INSERT INTO @RemainingStockMapping
+    (
+        MR_Items_Id,
+        Remaining_Stock_Id
+    )
+    SELECT
+        S.MR_Items_Id,
+        SV.Id
+
+    FROM @RemainingSource S
+
+    INNER JOIN StockView SV
+        ON SV.Godown_Id = S.Godown_Id
+        AND SV.Item_Id = S.Item_Id
+        AND SV.Length = S.Remaining_Length
+        AND SV.Width = S.Width
+        AND SV.Rack_Id = S.Rack_Id
+        AND SV.Stype = S.Stype;
 
 
+    /* =========================================
+       UPDATE MR_ITEMS RemainingStock_Id
+    ========================================= */
+
+    UPDATE MI
+    SET MI.RemainingStock_Id = RSM.Remaining_Stock_Id
+
+    FROM MR_Items MI
+
+    INNER JOIN @RemainingStockMapping RSM
+        ON RSM.MR_Items_Id = MI.MR_Items_Id
+
+    WHERE MI.MR_Id = @MR_Id
+      AND MI.IsChecked = 1
+      AND ISNULL(MI.IsCustom,0)=0
+      AND ISNULL(MI.Length,0)>0
+
+      -- IMPORTANT CONDITION
+      AND ISNULL(MI.RemainingStock_Id,0)=0;
+
+
+      /* =========================================
+       STOCK TRANSFER HISTORY
+    ========================================= */
+
+    INSERT INTO Stock_Transfer_History
+    (
+       Godown_Id,
+       Item_Id,
+       SType,
+       Transfer_Qty,
+       Length,
+       Transfer_Date,
+       Width,
+       Remark,
+       Rack_Id,
+       StockEntryPage,
+       Tbl_Name,
+       Transfer_Type,
+       Transfer_TypeInBit,
+       Stock_Id
+    )
+    SELECT
+       SV.Godown_Id,
+       SV.Item_Id,
+       SV.SType,
+       RS.Qty,
+       SV.Length,
+       dbo.Get_sysdate(),
+       SV.Width,
+       'MR Split Remaining Length',
+       SV.Rack_Id,
+       'MR Approved',
+       'StockView',
+       'IN',
+       0,
+       SV.Id
+
+    FROM @RemainingSource RS
+
+    INNER JOIN StockView SV
+        ON SV.Godown_Id = RS.Godown_Id
+        AND SV.Item_Id = RS.Item_Id
+        AND SV.Length = RS.Remaining_Length
+        AND SV.Width = RS.Width
+        AND SV.Rack_Id = RS.Rack_Id
+        AND SV.Stype = RS.Stype;
 
 
 ---------------------------- end remaining stock length-----------------------------------------------------
@@ -516,16 +824,24 @@ AND MI.IsChecked = 1
 AND ISNULL(MI.IsCustom,0) = 0
 AND ISNULL(MI.Length,0) > 0;
 
---UPDATE M_Item SET Stock_Id = @newStockId WHERE M_Items.MR_Id = @MR_Id AND M_Items
-UPDATE MI
-SET MI.Stock_Id = NS.New_Stock_Id
-FROM MR_Items MI
-INNER JOIN @NewStock NS
-    ON NS.MR_Items_Id = MI.MR_Items_Id
-WHERE MI.MR_Id = @MR_Id
-AND MI.IsChecked = 1
-AND ISNULL(MI.IsCustom, 0) = 0
-AND ISNULL(MI.Length, 0) > 0;
+            /* =========================================
+               UPDATE MR_ITEMS STOCK_ID
+            ========================================= */
+
+            UPDATE MI
+            SET MI.Stock_Id = SM.New_Stock_Id
+
+            FROM MR_Items MI
+
+            INNER JOIN @StockMapping SM
+                ON SM.MR_Items_Id = MI.MR_Items_Id
+
+            WHERE MI.MR_Id = @MR_Id
+              AND MI.IsChecked = 1
+              AND ISNULL(MI.IsCustom,0)=0
+              AND ISNULL(MI.Length,0)>0;
+
+
 END
 /* ============================
    CUSTOM ITEM STOCK CREATION
@@ -588,7 +904,9 @@ INNER JOIN StockView SV_New
    AND SV_New.Rack_Id   = SV_Old.Rack_Id
    AND SV_New.Stype     = SV_Old.Stype
 WHERE MI.MR_Id = @MR_Id
-  AND MI.IsCustom = 1;
+  AND MI.IsCustom = 1
+  AND ISNULL(MI.IsChecked,0)=0
+AND ISNULL(MI.Length,0)>0;
 
 
             INSERT INTO Stock_Transfer_History

@@ -201,7 +201,11 @@ SELECT  ROW_NUMBER() OVER( ORDER BY GRN_Dtl.PODtl_Id) AS SrNo,
 
    --GRN_Dtl.Unit_Id,                                    
 
-   Tbl_Unit.Master_Vals as Unit,                                      
+   Tbl_Unit.Master_Vals as Unit,   
+
+   Tbl_AlternateUnit.Master_Vals      AS AlternateUnit,
+   
+   M_Item.AlternateUnitValue      AS AlternateUnitValue,
 
    GRN_Dtl.[Length],  
 
@@ -270,13 +274,16 @@ left join M_Item_Category  with (nolock) On M_Item.Item_Cate_Id =   M_Item_Categ
 
 left join M_Project  With (NOLOCK) On PO_DTL.Project_Id = M_Project.Project_Id            
 
-left join M_Godown_Rack  With (NOLOCK) On GRN_Dtl.Rack_Id = M_Godown_Rack.Rack_Id            
+left join M_Godown_Rack  With (NOLOCK) On GRN_Dtl.Rack_Id = M_Godown_Rack.Rack_Id  
+
+left join M_Master AS Tbl_AlternateUnit WITH (nolock)   ON M_Item.Alternate_Unit_Id = Tbl_AlternateUnit.Master_Id
 
 where GRN_Dtl.GRN_Id = @GRN_Id           
 
 --AND GRN_Mst.Dept_ID = (case when @Dept_ID = 0 then GRN_Mst.Dept_ID else @Dept_ID end )                      
 
 --AND GRN_Mst.GRN_Type = @GRNType
+
 GO
 
 

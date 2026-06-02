@@ -60,16 +60,20 @@ AS
     
                 RETURN    
             END 
-            IF EXISTS(
-                SELECT 1
-                FROM m_project WITH (NOLOCK)
-                WHERE Site_Code = @Site_Code
-        )
-        BEGIN
-            SET @RetVal = -102
-            SET @RetMsg = 'Same Site Code Already Exists !!!'
-            RETURN
-        END
+            IF ISNULL(LTRIM(RTRIM(@Site_Code)), '') <> ''
+            BEGIN
+                IF EXISTS
+                (
+                    SELECT 1
+                    FROM m_project WITH (NOLOCK)
+                    WHERE Site_Code = @Site_Code
+                )
+                BEGIN
+                    SET @RetVal = -102
+                    SET @RetMsg = 'Same Site Code Already Exists !!!'
+                    RETURN
+                END
+            END
     
           INSERT INTO m_project WITH(rowlock)    
                       (pro_inchargeid,    
@@ -182,16 +186,19 @@ AS
     
                 RETURN    
             END   
-           IF EXISTS (
+           IF ISNULL(LTRIM(RTRIM(@Site_Code)), '') <> ''
+            BEGIN
+                IF EXISTS
+                (
                     SELECT 1
                     FROM m_project WITH (NOLOCK)
                     WHERE Site_Code = @Site_Code
-                    AND Project_Id <> @Project_Id
-            )
-            BEGIN
-                SET @RetVal = -102
-                SET @RetMsg = 'Same Site Code Already Exists !!!'
-                RETURN
+                )
+                BEGIN
+                    SET @RetVal = -102
+                    SET @RetMsg = 'Same Site Code Already Exists !!!'
+                    RETURN
+                END
             END
     
           IF EXISTS(SELECT 1    

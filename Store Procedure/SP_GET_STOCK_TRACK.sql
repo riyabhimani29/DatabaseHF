@@ -10,7 +10,6 @@ GO
 
 
 
-
 ALTER PROCEDURE [dbo].[SP_GET_STOCK_TRACK]
     @STOCK_ID INT
 AS
@@ -330,10 +329,31 @@ BEGIN
               AND MRI.IsChecked = 1
               AND MR.MR_TYPE = 'A'
 
+       UNION ALL
+          SELECT 
+            MRI.ITEM_ID,
+            mi.item_code,
+            mi.item_name,
+            SV.STYPE,
+            SV.LENGTH AS LENGTH,
+            'Material Inward'  AS Transfer_Page,
+            'IN' AS Transfer_Type,
+            MRI.Total_Qty AS Qty,
+           MRI.Entry_Date as Entry_Date,  
+            SV.Rack_ID,
+            SV.GODOWN_ID,
+            SV.WIDTH
+        FROM material_inward MRI
+        LEFT JOIN M_item mi
+            ON mi.item_id = MRI.ITEM_ID
+        LEFT JOIN StockView SV
+            ON SV.Id = MRI.Stock_Id
+        WHERE MRI.Stock_Id = @STOCK_ID
+              AND MRI.Status = 'F'
+
     ) A
     ORDER BY A.Entry_Date ASC
 END;
-
 
 GO
 

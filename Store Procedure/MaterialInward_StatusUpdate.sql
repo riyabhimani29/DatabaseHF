@@ -169,7 +169,7 @@ BEGIN
                 (
                     @Godown_Id,
                     @Item_Id,
-                    @SType,
+                    ISNULL(@SType,'N'),
                     @Qty,
                     @Qty,
                     @Length,

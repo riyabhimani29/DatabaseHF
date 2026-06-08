@@ -26,6 +26,7 @@ BEGIN
         M.MR_CODE as Document_No,
         M.Project_Id,
         MP.Project_Name,
+        ISNULL(MP.Site_Code,'') AS Site_Code,
         M.Dept_ID,
         MD.Dept_Name,
         MRI.Item_Id,
@@ -69,6 +70,7 @@ BEGIN
         M.MR_CODE as Document_No,
         M.Project_Id,
         MP.Project_Name,
+        ISNULL(MP.Site_Code,'') AS Site_Code,
         M.Dept_ID,
         'Mill FINISH' AS Dept_Name,
         MRI.Item_Id,
@@ -113,6 +115,7 @@ BEGIN
 DM.DC_No as Document_No,
 DM.Project_Id,
 MP.Project_Name,
+ISNULL(MP.Site_Code,'') AS Site_Code,
 MD.Dept_ID,
 'COATING' AS Dept_Name,
 DCD.Item_Id,
@@ -155,6 +158,7 @@ SELECT
     PM.OrderNo as Document_No,
     PD.Project_Id,
     MP.Project_Name,
+    ISNULL(MP.Site_Code,'') AS Site_Code,
     PM.Dept_Id,
     MD.Dept_Name,
     PD.Item_Id,
@@ -195,6 +199,7 @@ WHERE PD.Project_Id = @Project_Id
         SFT.Outward_No  as Document_No,
         SFTD.Project_Id,
         MP.Project_Name,
+        ISNULL(MP.Site_Code,'') AS Site_Code,
         1012 AS Dept_Id,   -- ? explicit instead of fake join
         MD.Dept_Name,
         SFTD.[ItemId ],
@@ -229,5 +234,3 @@ WHERE PD.Project_Id = @Project_Id
     ---------------------------------------
     ORDER BY Dept_ID
 END
-
-

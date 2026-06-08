@@ -112,7 +112,8 @@ BEGIN
 
         Q.Inquiry_No,
 
-        G.Godown_Name
+        G.Godown_Name,
+        ISNULL(P.Site_Code,'') AS Site_Code
 
     FROM 
 
@@ -155,7 +156,6 @@ BEGIN
         P.Entry_Date DESC;
 
 END;
- 
-GO
+ GO
 
 

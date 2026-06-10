@@ -67,7 +67,8 @@ BEGIN
         END AS IsProject,
         sod.Issue_to AS IssueTo,
         sod.Remark,
-        P.Project_Name
+        P.Project_Name,
+        sod.Pd_Ref_No
     FROM safetytools_outward_Dtl sod WITH (NOLOCK)     
     LEFT JOIN StockView sv WITH (NOLOCK)  
         ON sv.Id = sod.Stock_Id  

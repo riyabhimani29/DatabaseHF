@@ -68,16 +68,17 @@ BEGIN
             @_GRN_date DATETIME,
             @_IsProject INT,
             @_IssueTo VARCHAR(500),
-            @_Remark VARCHAR(500);
+            @_Remark VARCHAR(500),
+            @_Pd_Ref_No VARCHAR(500);
 
         DECLARE db_cursor CURSOR FOR
-        SELECT ItemId, Stock_Id, Item_Code, Item_Name, Rack_Name, Unit_Name, OutwardQty,Project_Id,GRN_date,IsProject,IssueTo,Remark
+        SELECT ItemId, Stock_Id, Item_Code, Item_Name, Rack_Name, Unit_Name, OutwardQty,Project_Id,GRN_date,IsProject,IssueTo,Remark,Pd_Ref_No
         FROM @DtlPara;
 
         OPEN db_cursor;
 
         FETCH NEXT FROM db_cursor INTO 
-            @_Item_Id, @_Stock_Id, @_Item_Code, @_Item_Name, @_Rack_Name, @_Unit_Name, @_OutwardQty,@_Project_Id,@_GRN_date,@_IsProject,@_IssueTo,@_Remark;
+            @_Item_Id, @_Stock_Id, @_Item_Code, @_Item_Name, @_Rack_Name, @_Unit_Name, @_OutwardQty,@_Project_Id,@_GRN_date,@_IsProject,@_IssueTo,@_Remark, @_Pd_Ref_No;
 
         WHILE @@FETCH_STATUS = 0
         BEGIN
@@ -99,7 +100,8 @@ BEGIN
                     Issue_date,
                     issue_type,
                     Issue_to,
-                    Remark
+                    Remark,
+                    Pd_Ref_No
                 )
                 VALUES
                 (
@@ -115,7 +117,8 @@ BEGIN
                     @_GRN_date,
                     @_IsProject,
                     @_IssueTo,
-                    @_Remark
+                    @_Remark,
+                    @_Pd_Ref_No
                 );
 
                 SET @_DtlIId = SCOPE_IDENTITY();
@@ -173,7 +176,7 @@ BEGIN
             END
 
             FETCH NEXT FROM db_cursor INTO 
-                @_Item_Id, @_Stock_Id, @_Item_Code, @_Item_Name, @_Rack_Name, @_Unit_Name, @_OutwardQty,@_Project_Id,@_GRN_date,@_IsProject,@_IssueTo,@_Remark;
+                @_Item_Id, @_Stock_Id, @_Item_Code, @_Item_Name, @_Rack_Name, @_Unit_Name, @_OutwardQty,@_Project_Id,@_GRN_date,@_IsProject,@_IssueTo,@_Remark,@_Pd_Ref_No;
         END
 
         CLOSE db_cursor;

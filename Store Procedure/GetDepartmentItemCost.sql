@@ -18,7 +18,6 @@ BEGIN
     SET NOCOUNT ON;
 
     
-
     ---------------------------------------
     -- 1. MATERIAL REQUIREMENT
     ---------------------------------------
@@ -27,6 +26,7 @@ BEGIN
         M.Project_Id,
         MP.Project_Name,
         ISNULL(MP.Site_Code,'') AS Site_Code,
+        ISNULL(M.Pd_Ref_No,'') AS Pd_Ref_No,
         M.Dept_ID,
         MD.Dept_Name,
         MRI.Item_Id,
@@ -46,7 +46,8 @@ BEGIN
         0 AS Insurance,
         0 AS Other_Charges,
         0 AS Freight_Charges,
-        0 AS DiscountAmount
+        0 AS DiscountAmount,
+        M.Authorised_Date AS Date
 
 
     FROM MaterialRequirement M
@@ -71,6 +72,7 @@ BEGIN
         M.Project_Id,
         MP.Project_Name,
         ISNULL(MP.Site_Code,'') AS Site_Code,
+        ISNULL(M.Pd_Ref_No,'') AS Pd_Ref_No,
         M.Dept_ID,
         'Mill FINISH' AS Dept_Name,
         MRI.Item_Id,
@@ -90,7 +92,8 @@ BEGIN
         0 AS Insurance,
         0 AS Other_Charges,
         0 AS Freight_Charges,
-        0 AS DiscountAmount
+        0 AS DiscountAmount,
+        M.Authorised_Date AS Date
 
 
     FROM MaterialRequirement M
@@ -116,6 +119,7 @@ DM.DC_No as Document_No,
 DM.Project_Id,
 MP.Project_Name,
 ISNULL(MP.Site_Code,'') AS Site_Code,
+ISNULL(DM.ProjectDocument,'') AS Pd_Ref_No,
 MD.Dept_ID,
 'COATING' AS Dept_Name,
 DCD.Item_Id,
@@ -135,7 +139,8 @@ MM.Master_Vals,
 0 AS Insurance,
 0 AS Other_Charges,
 0 AS Freight_Charges,
-0 AS DiscountAmount
+0 AS DiscountAmount,
+DM.Entry_Date AS Date
 
 FROM DC_MST DM
 
@@ -159,6 +164,7 @@ SELECT
     PD.Project_Id,
     MP.Project_Name,
     ISNULL(MP.Site_Code,'') AS Site_Code,
+    ISNULL(PD.Pd_Ref_No,'') AS Pd_Ref_No,
     PM.Dept_Id,
     MD.Dept_Name,
     PD.Item_Id,
@@ -178,8 +184,8 @@ SELECT
     PM.Insurance,
     PM.Other_Charges,
     PM.Freight_Charges,
-    PM.DiscountAmount
-
+    PM.DiscountAmount,
+    PM.Entry_Date AS Date
 FROM PO_MST PM
 LEFT JOIN PO_DTL PD ON PM.PO_ID = PD.PO_ID
 LEFT JOIN M_Project MP ON MP.Project_Id = PD.Project_Id
@@ -200,6 +206,7 @@ WHERE PD.Project_Id = @Project_Id
         SFTD.Project_Id,
         MP.Project_Name,
         ISNULL(MP.Site_Code,'') AS Site_Code,
+        ISNULL(SFTD.Pd_Ref_No,'') AS Pd_Ref_No,
         1012 AS Dept_Id,   -- ? explicit instead of fake join
         MD.Dept_Name,
         SFTD.[ItemId ],
@@ -219,7 +226,8 @@ WHERE PD.Project_Id = @Project_Id
         0 AS Insurance,
         0 AS Other_Charges,
         0 AS Freight_Charges,
-        0 AS DiscountAmount
+        0 AS DiscountAmount,
+        SFT.Entry_Date AS Date
 
     FROM safetytools_outward_Dtl SFTD
     left JOIN safetytools_outward SFT ON SFT.Id = SFTD.StOutward_Id

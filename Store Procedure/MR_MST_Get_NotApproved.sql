@@ -178,6 +178,8 @@ OR
     AND (@Project_Id = 0 OR MaterialRequirement.Project_Id = @Project_Id)
     AND (@Dept_ID = 0 OR MaterialRequirement.Dept_ID = @Dept_ID)
     AND (@MR_Id = 0 OR MaterialRequirement.MR_Id = @MR_Id)
+        AND MaterialRequirement.Entry_Date >= @fr_date
+AND MaterialRequirement.Entry_Date < DATEADD(DAY, 1,@Tr_date)
   --  AND MaterialRequirement.MR_Type = 'A'
 ORDER BY MaterialRequirement.MR_Id DESC
 

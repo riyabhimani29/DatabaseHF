@@ -389,7 +389,8 @@ WHEN NOT MATCHED BY TARGET THEN
         SupDetail_Id,
         IsChecked,
         IsCustom,
-        Stock_Length
+        Stock_Length,
+        MR_ReasonItem
     )
     VALUES (
         @RetVal,
@@ -422,7 +423,8 @@ WHEN NOT MATCHED BY TARGET THEN
         WHERE SV.Id = source.Stock_Id
     )
 END
-        )
+        ),
+        source.MR_ReasonItem
     );
 
  

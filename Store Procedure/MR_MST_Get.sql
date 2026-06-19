@@ -29,6 +29,7 @@ AS
     M_Department.Dept_Name,
     MaterialRequirement.MR_Department,
     MaterialRequirement.Entry_User,
+    entry_user.Emp_Name AS UserName,
     MaterialRequirement.Entry_Date,
     MaterialRequirement.MR_Type,
     MaterialRequirement.MR_Code,
@@ -153,6 +154,7 @@ FOR JSON PATH) as Dt_Detail
         
     LEFT OUTER JOIN M_Employee_Role as authorize ON MaterialRequirement.Authorised_By = authorize.Id
         LEFT OUTER JOIN M_Employee as authorize_emp ON authorize.Emp_Id = authorize_emp.Emp_Id
+        LEFT OUTER JOIN M_Employee as entry_user ON entry_user.Emp_Id = MaterialRequirement.Entry_User
         WHERE 
          ((
     -- Case 1: If type is 'approval'

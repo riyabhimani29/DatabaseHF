@@ -79,10 +79,7 @@ AS
            LEFT JOIN M_Item_Category WITH (nolock)   ON M_Item.item_cate_id = M_Item_Category.item_cate_id      
     -- left join M_SupplierDtl With (NOLOCK)  On M_SupplierDtl.Item_Id  = M_Item.Item_Id      
     -- and  M_SupplierDtl.Item_Group_Id  = M_Item.Item_Group_Id and M_SupplierDtl.Item_Cate_Id  = M_Item.Item_Cate_Id                                      
-    WHERE M_Item.is_active = CASE      
-     WHEN @Type = 0 THEN M_Item.is_active      
-          ELSE 1      
-        END      
+    WHERE M_Item.is_active =@Type
   and M_Item_Group.Dept_ID  LIKE (case when   @Dept_ID =0 then M_Item_Group.Dept_ID else @Dept_ID end)    
  ORDER  BY M_Item.entry_date DESC       
       

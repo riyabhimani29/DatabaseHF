@@ -88,7 +88,8 @@ BEGIN
                 and (MR_Items.Stock_Id = 0 OR SV.Id = MR_Items.Stock_Id)
                 )
                 AS Stock_Id,
-                MR_Items.Is_Job_Work
+                MR_Items.Is_Job_Work,
+                MR_Items.Remarks
             FROM Coating_RequestDtl
             JOIN MR_Items ON Coating_RequestDtl.BOM_Dtl_Id = MR_Items.MR_Items_Id
             LEFT JOIN MaterialRequirement ON MR_Items.MR_Id = MaterialRequirement.MR_Id

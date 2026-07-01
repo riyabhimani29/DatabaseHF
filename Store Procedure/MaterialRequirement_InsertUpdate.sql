@@ -49,6 +49,10 @@ BEGIN
     DECLARE @DeptShortName NVARCHAR(20);
     DECLARE @NextSeq INT;
     DECLARE @MR_Code NVARCHAR(30);
+    DECLARE @FinancialYear NVARCHAR(10);
+
+    SET @FinancialYear = dbo.Get_financial_year(CONVERT (DATE, dbo.Get_sysdate()))      
+
 
     BEGIN TRY
         BEGIN TRANSACTION;
@@ -166,18 +170,32 @@ END
                  END
 
                  -- Get next sequence number for this department
-                 SELECT @NextSeq =
-                 ISNULL(
-                   MAX(CAST(RIGHT(MR_Code, 6) AS INT)), 0
-                 ) + 1
-                 FROM MaterialRequirement
-                 WHERE MR_Code LIKE 'MR-' + @DeptShortName + '-%';
+                  SELECT @NextSeq =
+                    ISNULL(
+                        MAX(SeqNo), 0
+                    ) + 1
+                    FROM
+                    (
+                        SELECT TRY_CAST(
+                            SUBSTRING(
+                                MR_Code,
+                                LEN('TWF/' + @DeptShortName + '/' + @MR_Department + '/') + 1,
+                                4
+                            ) AS INT
+                        ) AS SeqNo
+                        FROM MaterialRequirement
+                        WHERE MR_Code LIKE 'TWF/' + @DeptShortName + '/' + @MR_Department + '/%'
+                    ) A
+                    WHERE SeqNo BETWEEN 1 AND 9999;
 
                  -- Generate MR_Code
-                 SET @MR_Code =
-                 'MR-' +
-                 @DeptShortName + '-' +
-                 RIGHT('000000' + CAST(@NextSeq AS NVARCHAR(6)), 6);
+                 SET @MR_Code='TWF/'
+                    +@DeptShortName+'/'
+                    +@MR_Department+'/'
+                    +RIGHT('0000'+CAST(@NextSeq AS VARCHAR),4)
+                    +'/'
+                    +@FinancialYear;
+                
 
                 -- Update MR_Code
                 UPDATE MaterialRequirement
@@ -265,19 +283,32 @@ END
                  END
 
                  -- Get next sequence number for this department
-                 SELECT @NextSeq =
-                 ISNULL(
-                   MAX(CAST(RIGHT(MR_Code, 6) AS INT)), 0
-                 ) + 1
-                 FROM MaterialRequirement
-                 WHERE MR_Code LIKE 'MR-' + @DeptShortName + '-%';
+                  SELECT @NextSeq =
+                    ISNULL(
+                        MAX(SeqNo), 0
+                    ) + 1
+                    FROM
+                    (
+                        SELECT TRY_CAST(
+                            SUBSTRING(
+                                MR_Code,
+                                LEN('TWF/' + @DeptShortName + '/' + @MR_Department + '/') + 1,
+                                4
+                            ) AS INT
+                        ) AS SeqNo
+                        FROM MaterialRequirement
+                        WHERE MR_Code LIKE 'TWF/' + @DeptShortName + '/' + @MR_Department + '/%'
+                    ) A
+                    WHERE SeqNo BETWEEN 1 AND 9999;
 
                  -- Generate MR_Code
-                 SET @MR_Code =
-                 'MR-' +
-                 @DeptShortName + '-' +
-                 RIGHT('000000' + CAST(@NextSeq AS NVARCHAR(6)), 6);
-
+                 SET @MR_Code='TWF/'
+                    +@DeptShortName+'/'
+                    +@MR_Department+'/'
+                    +RIGHT('0000'+CAST(@NextSeq AS VARCHAR),4)
+                    +'/'
+                    +@FinancialYear;
+                
                 -- Update MR_Code
                 UPDATE MaterialRequirement
                 SET MR_Code = @MR_Code,
